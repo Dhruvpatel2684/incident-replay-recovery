@@ -1,0 +1,23 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "devops"
+difficulty = "hard"
+tags = ["devops", "configuration-management", "drift-detection", "compliance", "python"]
+
+difficulty_explanation = "The reconciler contains multiple interacting defects across the comparison engine and compliance scorer. A path prefix error disables both type coercion and order-insensitive comparison simultaneously. The lack of recursive descent means nested config differences are reported at the wrong granularity. The compliance module has both a status-check mismatch and arithmetic truncation. Fixing requires understanding how field path resolution interacts with configuration-driven comparison rules."
+
+solution_explanation = "The repair removes the erroneous path prefix from compare_configs invocation, adds recursive descent into nested dicts, fixes the bare field name extraction for coercion and order-insensitive lookups, corrects the decommissioned status check, and replaces integer floor division with precise float division in compliance scoring."
+
+verification_explanation = "Validation checks drift report granularity (nested sub-keys vs parent objects), absence of false positives for type-coerced and order-insensitive fields, correct field path notation, decommissioned node exclusion, compliance precision, node counts, and report integrity (SHA-256, record counts, remediation totals)."
+
+expert_time_estimate_hours = 2.0
+
+[task]
+entrypoint = "python3 /app/runtime/run_reconciler.py"
+validator = "python3 -m pytest /tests/test_drift.py"
+repair = "python3 /solution/repair_reconciler.py"
+
+[environment]
+language = "python"
+runtime = "python3"
+dependencies = ["pytest"]
