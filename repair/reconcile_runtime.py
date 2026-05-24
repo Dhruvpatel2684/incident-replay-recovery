@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Replay runtime reconciliation.
 
-Repairs corrupted replay state in-place after a defective pipeline run.
+Repairs corrupted replay state in-place after a defective runtime execution.
 Operates directly on replay_state.db and regenerates export artifacts.
 """
 
@@ -271,7 +271,7 @@ def regenerate_export(conn, config):
     with open(integrity_path, "w") as f:
         json.dump(integrity, f, indent=2)
 
-    logger.info("export regenerated: %d events, %d windows → %s", event_count, len(windows), timeline_path)
+    logger.info("export rebuilt: %d events, %d windows → %s", event_count, len(windows), timeline_path)
     return timeline_path, integrity_path
 
 

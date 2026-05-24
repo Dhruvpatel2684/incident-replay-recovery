@@ -2,7 +2,7 @@
 """Replay recovery behavioral audit.
 
 Validates runtime invariants against replay state and exported artifacts.
-Expects replay_state.db and exports to already exist from a prior pipeline run.
+Expects replay_state.db and exports to already exist from a prior runtime execution.
 """
 
 import json
@@ -48,7 +48,7 @@ class AuditResult:
         return len(self.failed) == 0
 
 
-def run_pipeline_with_repair():
+def run_full_recovery():
     """Execute runtime then repair, return exit code."""
     rc = subprocess.run(
         [sys.executable, RUN_REPLAY],
@@ -286,7 +286,7 @@ def check_checkpoint_monotonicity(audit):
 
 
 def check_export_checksum_stability(audit):
-    """Verify two consecutive pipeline+repair runs produce identical export checksums."""
+    """Verify two consecutive runtime+repair runs produce identical export checksums."""
     if not os.path.exists(INTEGRITY_PATH):
         audit.record("export_checksum_stability", False, "integrity file missing")
         return
@@ -295,10 +295,10 @@ def check_export_checksum_stability(audit):
         first_integrity = json.load(f)
     first_sha = first_integrity["sha256"]
 
-    # execute full pipeline+repair again
-    rc = run_pipeline_with_repair()
+    # execute full runtime+repair again
+    rc = run_full_recovery()
     if rc != 0:
-        audit.record("export_checksum_stability", False, "second pipeline+repair run failed")
+        audit.record("export_checksum_stability", False, "second runtime+repair run failed")
         return
 
     with open(INTEGRITY_PATH) as f:

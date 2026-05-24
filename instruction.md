@@ -45,5 +45,5 @@ The repair should reconcile replay state without rewriting the runtime modules. 
 - `runtime/cursor.py` — cursor lifecycle and checkpoint management
 - `runtime/retention.py` — window expiration and cleanup
 - `runtime/export.py` — timeline export with integrity checksum
-- `runtime/replay_state.db` — SQLite replay state (generated at runtime)
+- `runtime/replay_state.db` — SQLite replay state (created during execution)
 - `runtime/exports/` — output artifacts

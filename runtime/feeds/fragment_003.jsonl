@@ -7,4 +7,4 @@
 {"event_id": "evt-c007", "timestamp": "2024-01-15T10:05:00+00:00", "data": {"service": "lb-manager", "level": "warn", "message": "backend pool member flapping", "pool": "pool-east-2"}}
 {"event_id": "evt-c008", "timestamp": "2024-01-15T10:10:00Z", "data": {"service": "lb-manager", "level": "error", "message": "drain timeout exceeded on pool-east-2", "pool": "pool-east-2"}}
 {"event_id": "evt-c009", "timestamp": "2024-01-15T10:16:30+00:00", "data": {"service": "lb-manager", "level": "info", "message": "pool stabilized after member replacement", "pool": "pool-east-2"}}
-{"event_id": "evt-c010", "timestamp": "2024-01-15T10:18:00Z", "data": {"service": "deploy-controller", "level": "info", "message": "deployment pipeline resumed", "deploy_id": "dep-443"}}
+{"event_id": "evt-c010", "timestamp": "2024-01-15T10:18:00Z", "data": {"service": "deploy-controller", "level": "info", "message": "deployment sequence resumed", "deploy_id": "dep-443"}}
