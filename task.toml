@@ -1,9 +1,15 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "security"
+difficulty = "hard"
+tags = ["security", "incident-response", "sqlite", "replay-recovery", "determinism"]
+
 [task]
 name = "incident-replay-recovery"
 description = "Replay recovery runtime producing corrupted timeline exports due to timestamp normalization drift, window boundary overlap, stale cursor resurrection, and checkpoint race conditions"
 
 [task.difficulty]
-level = "medium"
+level = "hard"
 reasoning = "Requires understanding of timezone offset arithmetic, replay window boundary semantics, cursor lifecycle across retention purges, and checkpoint ordering invariants"
 
 [task.runtime]
