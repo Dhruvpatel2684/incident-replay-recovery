@@ -9,7 +9,7 @@ if [ ! -f /app/runtime/cluster_state.jsonl ]; then
 fi
 
 set +e
-python3 -m pytest -v /tests/test_consensus.py
+uv run --with pytest pytest -v /tests/test_consensus.py
 TEST_EXIT=$?
 set -e
 

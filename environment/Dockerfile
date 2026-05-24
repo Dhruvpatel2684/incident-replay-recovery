@@ -4,6 +4,6 @@ WORKDIR /app
 
 COPY runtime/ ./runtime/
 
-RUN pip3 install pytest
+RUN pip install uv
 
 CMD ["python3", "/app/runtime/consensus_engine.py"]
