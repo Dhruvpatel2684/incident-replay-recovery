@@ -1,0 +1,21 @@
+[task]
+name = "config-drift-reconciler"
+description = "Repair a configuration drift reconciler with interacting defects in recursive comparison, list normalization, status propagation, compliance scoring, and report integrity"
+version = "2.0"
+
+[task.metadata]
+difficulty = "hard"
+domain = "infrastructure"
+skills = ["debugging", "python", "recursion", "data-pipeline"]
+
+[environment]
+dockerfile = "environment/Dockerfile"
+runtime_path = "/app/runtime"
+
+[solution]
+solve_script = "solution/solve.sh"
+repair_module = "solution/repair_reconciler.py"
+
+[tests]
+test_script = "tests/test.sh"
+reward_file = "/logs/verifier/reward.txt"
