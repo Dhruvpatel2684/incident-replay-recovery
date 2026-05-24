@@ -37,6 +37,10 @@ After repair, the runtime must produce:
 
 The repair should reconcile replay state without rewriting the runtime modules. Inspect the SQLite replay state (`/app/runtime/replay_state.db`), identify metadata corruption, and apply targeted corrections that restore deterministic replay behavior.
 
+## Environment
+
+The runtime environment already contains the required system-wide Python tooling and pytest installation.
+
 ## Key Files
 
 - `/app/runtime/run_replay.py` — orchestration entrypoint
@@ -47,3 +51,4 @@ The repair should reconcile replay state without rewriting the runtime modules. 
 - `/app/runtime/export.py` — timeline export with integrity checksum
 - `/app/runtime/replay_state.db` — SQLite replay state (created during execution)
 - `/app/runtime/exports/` — output artifacts
+- `/app/solution/reconcile_runtime.py` — replay state reconciliation repair script

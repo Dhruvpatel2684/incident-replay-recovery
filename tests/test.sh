@@ -3,7 +3,9 @@ set -e
 
 cd /app
 
-python3 runtime/run_replay.py
+if [ ! -f runtime/replay_state.db ]; then
+    python3 runtime/run_replay.py
+fi
 
 mkdir -p /logs/verifier
 
