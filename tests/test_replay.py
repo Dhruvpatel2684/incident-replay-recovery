@@ -13,14 +13,16 @@ import sys
 from datetime import datetime, timezone, timedelta
 from collections import Counter
 
-BASE_DIR = "/app"
+TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(TESTS_DIR)
 RUNTIME_DIR = os.path.join(BASE_DIR, "runtime")
 DB_PATH = os.path.join(RUNTIME_DIR, "replay_state.db")
 EXPORTS_DIR = os.path.join(RUNTIME_DIR, "exports")
 TIMELINE_PATH = os.path.join(EXPORTS_DIR, "reconstructed_timeline.jsonl")
 INTEGRITY_PATH = os.path.join(EXPORTS_DIR, "replay_integrity.json")
 RUN_REPLAY = os.path.join(RUNTIME_DIR, "run_replay.py")
-SOLVE_SCRIPT = os.path.join(BASE_DIR, "solution", "solve.sh")
+SOLUTION_DIR = os.path.join(BASE_DIR, "solution")
+RECONCILE_SCRIPT = os.path.join(SOLUTION_DIR, "reconcile_runtime.py")
 
 
 def get_db():
@@ -218,10 +220,10 @@ def test_export_checksum_stability():
     assert rc == 0, "replay runtime failed on second run"
 
     rc = subprocess.run(
-        [sys.executable, os.path.join(BASE_DIR, "solution", "reconcile_runtime.py")],
+        [sys.executable, RECONCILE_SCRIPT],
         capture_output=True, text=True, cwd=BASE_DIR,
     ).returncode
-    assert rc == 0, "reconciliation failed on second run"
+    assert rc == 0, f"reconciliation failed on second run (exit {rc})"
 
     with open(INTEGRITY_PATH) as f:
         second_integrity = json.load(f)

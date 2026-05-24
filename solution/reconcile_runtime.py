@@ -14,9 +14,10 @@ import logging
 import configparser
 from datetime import datetime, timezone, timedelta
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+APP_ROOT = os.path.dirname(SCRIPT_DIR)
 
-RUNTIME_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "runtime")
+RUNTIME_DIR = os.path.join(APP_ROOT, "runtime")
 DB_PATH = os.path.join(RUNTIME_DIR, "replay_state.db")
 CONFIG_PATH = os.path.join(RUNTIME_DIR, "config", "replay.ini")
 EXPORTS_DIR = os.path.join(RUNTIME_DIR, "exports")
@@ -91,7 +92,6 @@ def rebuild_replay_windows(conn, config):
     """Rebuild window assignments with correct boundary semantics and deterministic ordering."""
     window_size = int(config.get("replay", "window_size_seconds", fallback="300"))
 
-    # clear existing windows
     conn.execute("DELETE FROM replay_windows")
     conn.commit()
 
@@ -106,20 +106,17 @@ def rebuild_replay_windows(conn, config):
     first_ts = datetime.fromisoformat(rows[0]["timestamp_norm"])
     last_ts = datetime.fromisoformat(rows[-1]["timestamp_norm"])
 
-    # align grid to epoch
     epoch = datetime(2024, 1, 15, tzinfo=timezone.utc)
     elapsed = (first_ts - epoch).total_seconds()
     grid_offset = int(elapsed // window_size) * window_size
     grid_start = epoch + timedelta(seconds=grid_offset)
 
-    # build grid
     grid = []
     cursor = grid_start
     while cursor <= last_ts:
         grid.append((cursor, cursor + timedelta(seconds=window_size)))
         cursor += timedelta(seconds=window_size)
 
-    # assign events to windows using strict less-than on upper bound
     window_events = {i: [] for i in range(len(grid))}
     for row in rows:
         evt_ts = datetime.fromisoformat(row["timestamp_norm"])
@@ -128,7 +125,6 @@ def rebuild_replay_windows(conn, config):
                 window_events[i].append(row["event_id"])
                 break
 
-    # persist non-empty windows with deterministic event ordering
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
     built = 0
     for i, (w_start, w_end) in enumerate(grid):
@@ -136,7 +132,6 @@ def rebuild_replay_windows(conn, config):
         if not event_ids:
             continue
 
-        # stable sort: already ordered by (timestamp_norm, event_id) from query
         conn.execute(
             "INSERT INTO replay_windows (window_start, window_end, event_ids, status, created_at) "
             "VALUES (?, ?, ?, 'active', ?)",
@@ -158,7 +153,6 @@ def reconcile_retention(conn, config):
     """Re-apply retention against corrected windows."""
     horizon_hours = int(config.get("retention", "horizon_hours", fallback="4"))
 
-    # clear stale retention metadata
     conn.execute("DELETE FROM retention_meta")
 
     latest = conn.execute(
@@ -194,13 +188,11 @@ def reconcile_retention(conn, config):
 
 def reconcile_cursors(conn):
     """Repair cursor state: mark orphaned cursors as stale, fix checkpoint drift."""
-    # identify existing window IDs
     active_windows = {
         r["window_id"]
         for r in conn.execute("SELECT window_id FROM replay_windows").fetchall()
     }
 
-    # mark cursors pointing to purged windows
     all_cursors = conn.execute("SELECT cursor_id, window_id, state FROM replay_cursor").fetchall()
     orphaned = 0
     for c in all_cursors:
@@ -211,8 +203,6 @@ def reconcile_cursors(conn):
             )
             orphaned += 1
 
-    # repair checkpoint drift: for remaining active cursors, ensure checkpoint_ts
-    # is not stale relative to the runtime execution window
     now_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
     conn.execute(
         "UPDATE replay_cursor SET checkpoint_ts = ?, updated_at = ?, position = 0 "
@@ -225,15 +215,12 @@ def reconcile_cursors(conn):
     return orphaned
 
 
-def regenerate_export(conn, config):
+def regenerate_export(conn):
     """Regenerate timeline export from repaired state."""
-    rel_path = config.get("export", "output_path", fallback="runtime/exports")
-    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    export_path = os.path.join(base, rel_path)
-    os.makedirs(export_path, exist_ok=True)
+    os.makedirs(EXPORTS_DIR, exist_ok=True)
 
-    timeline_path = os.path.join(export_path, "reconstructed_timeline.jsonl")
-    integrity_path = os.path.join(export_path, "replay_integrity.json")
+    timeline_path = os.path.join(EXPORTS_DIR, "reconstructed_timeline.jsonl")
+    integrity_path = os.path.join(EXPORTS_DIR, "replay_integrity.json")
 
     windows = conn.execute(
         "SELECT window_id, event_ids FROM replay_windows WHERE status = 'active' ORDER BY window_start"
@@ -277,28 +264,25 @@ def regenerate_export(conn, config):
 
 def main():
     logger.info("replay runtime reconciliation starting")
+    logger.info("RUNTIME_DIR: %s", RUNTIME_DIR)
+    logger.info("DB_PATH: %s", DB_PATH)
 
     if not os.path.exists(DB_PATH):
         logger.error("no replay state found at %s", DB_PATH)
         sys.exit(1)
 
+    if not os.path.exists(CONFIG_PATH):
+        logger.error("no config found at %s", CONFIG_PATH)
+        sys.exit(1)
+
     config = load_config()
     conn = get_connection()
 
-    # phase 1: correct timestamp normalization
     repair_timestamp_normalization(conn)
-
-    # phase 2: rebuild replay windows with correct boundaries
     rebuild_replay_windows(conn, config)
-
-    # phase 3: re-apply retention with corrected timestamps
     reconcile_retention(conn, config)
-
-    # phase 4: reconcile cursor state
     reconcile_cursors(conn)
-
-    # phase 5: regenerate exports from repaired state
-    regenerate_export(conn, config)
+    regenerate_export(conn)
 
     conn.close()
     logger.info("reconciliation complete")
