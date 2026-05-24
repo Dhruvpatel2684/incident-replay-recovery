@@ -8,8 +8,6 @@ import json
 import hashlib
 import os
 import sqlite3
-import subprocess
-import sys
 from datetime import datetime, timezone, timedelta
 from collections import Counter
 
@@ -18,8 +16,6 @@ DB_PATH = os.path.join(RUNTIME_DIR, "replay_state.db")
 EXPORTS_DIR = os.path.join(RUNTIME_DIR, "exports")
 TIMELINE_PATH = os.path.join(EXPORTS_DIR, "reconstructed_timeline.jsonl")
 INTEGRITY_PATH = os.path.join(EXPORTS_DIR, "replay_integrity.json")
-RUN_REPLAY = os.path.join(RUNTIME_DIR, "run_replay.py")
-RECONCILE_SCRIPT = "/solution/reconcile_runtime.py"
 
 
 def get_db():
@@ -201,32 +197,30 @@ def test_checkpoint_monotonicity():
     assert len(regressions) == 0, f"{len(regressions)} checkpoint regressions detected"
 
 
-def test_export_checksum_stability():
-    """Two consecutive runtime+repair runs must produce identical export checksums."""
-    assert os.path.exists(INTEGRITY_PATH), "integrity file missing"
+def test_export_event_count_consistency():
+    """Exported event count must match the number of unique events assigned to active windows."""
+    assert os.path.exists(TIMELINE_PATH), "timeline file missing"
 
-    with open(INTEGRITY_PATH) as f:
-        first_integrity = json.load(f)
-    first_sha = first_integrity["sha256"]
+    conn = get_db()
+    windows = conn.execute(
+        "SELECT event_ids FROM replay_windows WHERE status = 'active'"
+    ).fetchall()
+    conn.close()
 
-    # run full recovery again
-    rc = subprocess.run(
-        [sys.executable, RUN_REPLAY],
-        capture_output=True, text=True, cwd="/app",
-    ).returncode
-    assert rc == 0, "replay runtime failed on second run"
+    window_event_count = 0
+    for w in windows:
+        eids = json.loads(w["event_ids"])
+        window_event_count += len(eids)
 
-    rc = subprocess.run(
-        [sys.executable, RECONCILE_SCRIPT],
-        capture_output=True, text=True, cwd="/app",
-    ).returncode
-    assert rc == 0, f"reconciliation failed on second run (exit {rc})"
+    line_count = 0
+    with open(TIMELINE_PATH) as f:
+        for line in f:
+            if line.strip():
+                line_count += 1
 
-    with open(INTEGRITY_PATH) as f:
-        second_integrity = json.load(f)
-    second_sha = second_integrity["sha256"]
-
-    assert first_sha == second_sha, f"checksum mismatch: {first_sha[:16]}... vs {second_sha[:16]}..."
+    assert line_count == window_event_count, (
+        f"export has {line_count} events but active windows reference {window_event_count}"
+    )
 
 
 def test_window_uniqueness():

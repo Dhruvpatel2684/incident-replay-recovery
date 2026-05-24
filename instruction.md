@@ -16,7 +16,7 @@ After a partial recovery scenario, the exported timeline exhibits several anomal
 
 Running `python3 /app/runtime/run_replay.py` produces an export that:
 
-1. Contains more event references than the number of unique ingested events
+1. Contains more event references than the number of unique ingested events — events landing exactly on a window boundary timestamp appear in both the closing and opening windows
 2. Shows events from `+05:30` timezone sources placed incorrectly in the timeline
 3. Leaves cursor state pointing to purged replay windows
 4. Overwrites cursor progress with older checkpoint timestamps
