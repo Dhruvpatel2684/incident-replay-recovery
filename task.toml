@@ -26,9 +26,15 @@ language = "python"
 dependencies = "stdlib-only"
 
 [task.validator]
-command = "bash validator/run_audit.sh"
+command = "bash tests/test.sh"
 description = "Behavioral audit verifying timeline ordering, event uniqueness, UTC normalization, cursor consistency, checkpoint monotonicity, window uniqueness, referential integrity, and export determinism"
 
 [task.repair]
-command = "bash repair/run_repair.sh"
+command = "bash solution/solve.sh"
 description = "Reconciles replay state by correcting timestamp normalization, rebuilding window boundaries with strict upper-bound semantics, marking orphaned cursors, resetting stale checkpoints, and regenerating exports"
+
+[task.resources]
+timeout = 300
+cpu = 2
+memory = "2GB"
+disk = "1GB"
