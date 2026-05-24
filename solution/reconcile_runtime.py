@@ -14,10 +14,7 @@ import logging
 import configparser
 from datetime import datetime, timezone, timedelta
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-APP_ROOT = os.path.dirname(SCRIPT_DIR)
-
-RUNTIME_DIR = os.path.join(APP_ROOT, "runtime")
+RUNTIME_DIR = "/app/runtime"
 DB_PATH = os.path.join(RUNTIME_DIR, "replay_state.db")
 CONFIG_PATH = os.path.join(RUNTIME_DIR, "config", "replay.ini")
 EXPORTS_DIR = os.path.join(RUNTIME_DIR, "exports")

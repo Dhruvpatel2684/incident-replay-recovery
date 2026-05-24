@@ -13,16 +13,13 @@ import sys
 from datetime import datetime, timezone, timedelta
 from collections import Counter
 
-TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
-BASE_DIR = os.path.dirname(TESTS_DIR)
-RUNTIME_DIR = os.path.join(BASE_DIR, "runtime")
+RUNTIME_DIR = "/app/runtime"
 DB_PATH = os.path.join(RUNTIME_DIR, "replay_state.db")
 EXPORTS_DIR = os.path.join(RUNTIME_DIR, "exports")
 TIMELINE_PATH = os.path.join(EXPORTS_DIR, "reconstructed_timeline.jsonl")
 INTEGRITY_PATH = os.path.join(EXPORTS_DIR, "replay_integrity.json")
 RUN_REPLAY = os.path.join(RUNTIME_DIR, "run_replay.py")
-SOLUTION_DIR = os.path.join(BASE_DIR, "solution")
-RECONCILE_SCRIPT = os.path.join(SOLUTION_DIR, "reconcile_runtime.py")
+RECONCILE_SCRIPT = "/solution/reconcile_runtime.py"
 
 
 def get_db():
@@ -215,13 +212,13 @@ def test_export_checksum_stability():
     # run full recovery again
     rc = subprocess.run(
         [sys.executable, RUN_REPLAY],
-        capture_output=True, text=True, cwd=BASE_DIR,
+        capture_output=True, text=True, cwd="/app",
     ).returncode
     assert rc == 0, "replay runtime failed on second run"
 
     rc = subprocess.run(
         [sys.executable, RECONCILE_SCRIPT],
-        capture_output=True, text=True, cwd=BASE_DIR,
+        capture_output=True, text=True, cwd="/app",
     ).returncode
     assert rc == 0, f"reconciliation failed on second run (exit {rc})"
 

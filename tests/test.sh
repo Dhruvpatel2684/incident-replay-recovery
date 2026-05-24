@@ -3,16 +3,12 @@ set -euo pipefail
 
 mkdir -p /logs/verifier
 
-cd /app
-
 if [ ! -f /app/runtime/replay_state.db ]; then
     python3 /app/runtime/run_replay.py
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-
 set +e
-python3 -m pytest -v "${SCRIPT_DIR}/test_replay.py"
+python3 -m pytest -v /tests/test_replay.py
 TEST_EXIT=$?
 set -e
 
