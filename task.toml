@@ -4,6 +4,14 @@ category = "security"
 difficulty = "hard"
 tags = ["security", "incident-response", "sqlite", "replay-recovery", "determinism"]
 
+difficulty_explanation = "The replay recovery runtime contains multiple interacting state defects involving replay window overlap, timezone normalization drift, stale cursor resurrection, checkpoint regression, and nondeterministic event ordering. Repair requires reasoning across SQLite replay state, deterministic reconstruction, retention reconciliation, and replay export integrity."
+
+solution_explanation = "The repair reconciles corrupted replay state without replacing the runtime architecture. It repairs timestamp normalization, rebuilds replay windows deterministically, reconciles stale cursors, stabilizes ordering semantics, repairs checkpoint regressions, and regenerates deterministic replay exports."
+
+verification_explanation = "Validation executes the replay runtime, inspects SQLite replay state, validates replay exports, verifies deterministic replay ordering, checks cursor consistency, replay window uniqueness, UTC normalization correctness, checkpoint monotonicity, and deterministic replay checksum stability."
+
+expert_time_estimate_hours = 2.5
+
 [task]
 name = "incident-replay-recovery"
 description = "Replay recovery runtime producing corrupted timeline exports due to timestamp normalization drift, window boundary overlap, stale cursor resurrection, and checkpoint race conditions"

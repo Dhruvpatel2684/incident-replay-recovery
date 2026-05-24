@@ -14,7 +14,7 @@ After a partial recovery scenario, the exported timeline exhibits several anomal
 
 ## Observed Symptoms
 
-Running `python3 runtime/run_replay.py` produces an export that:
+Running `python3 /app/runtime/run_replay.py` produces an export that:
 
 1. Contains more event references than the number of unique ingested events
 2. Shows events from `+05:30` timezone sources placed incorrectly in the timeline
@@ -35,15 +35,15 @@ After repair, the runtime must produce:
 
 ## Scope
 
-The repair should reconcile replay state without rewriting the runtime modules. Inspect the SQLite replay state (`runtime/replay_state.db`), identify metadata corruption, and apply targeted corrections that restore deterministic replay behavior.
+The repair should reconcile replay state without rewriting the runtime modules. Inspect the SQLite replay state (`/app/runtime/replay_state.db`), identify metadata corruption, and apply targeted corrections that restore deterministic replay behavior.
 
 ## Key Files
 
-- `runtime/run_replay.py` — orchestration entrypoint
-- `runtime/ingest.py` — JSONL feed ingestion and timestamp normalization
-- `runtime/reconstruct.py` — replay window construction
-- `runtime/cursor.py` — cursor lifecycle and checkpoint management
-- `runtime/retention.py` — window expiration and cleanup
-- `runtime/export.py` — timeline export with integrity checksum
-- `runtime/replay_state.db` — SQLite replay state (created during execution)
-- `runtime/exports/` — output artifacts
+- `/app/runtime/run_replay.py` — orchestration entrypoint
+- `/app/runtime/ingest.py` — JSONL feed ingestion and timestamp normalization
+- `/app/runtime/reconstruct.py` — replay window construction
+- `/app/runtime/cursor.py` — cursor lifecycle and checkpoint management
+- `/app/runtime/retention.py` — window expiration and cleanup
+- `/app/runtime/export.py` — timeline export with integrity checksum
+- `/app/runtime/replay_state.db` — SQLite replay state (created during execution)
+- `/app/runtime/exports/` — output artifacts
