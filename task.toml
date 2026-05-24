@@ -1,0 +1,13 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "distributed_systems"
+difficulty = "hard"
+tags = ["raft", "consensus", "distributed-systems", "log-replication", "state-machine", "debugging"]
+difficulty_explanation = "Requires understanding Raft consensus protocol mechanics (elections, log replication, commits) and tracing data flow across 3 interacting modules. Seven bugs are spread across log_parser.py, state_machine.py, and output_formatter.py with cross-file interactions: fixing one bug naively can break other tests, and several bugs mask each other's symptoms. The agent must reason about event ordering, quorum semantics, and per-node vs cluster-wide counting."
+solution_explanation = "The oracle re-implements the full replay pipeline with corrected logic: (1) fixes term extraction for VOTE_REQUEST events in the parser, (2) restores full timestamp precision, (3) resets vote counters after elections, (4) counts commits per-event not per-node, (5) uses prev_log_idx+1 for follower log positioning, (6) sorts nodes for deterministic hash computation, and (7) corrects quorum threshold to (n//2)+1."
+verification_explanation = "Tests validate both output files against exact expected values: correct commit count (7), split vote detection (1), consistency hash determinism, uniform log lengths across nodes, proper committed entry sequences, and correct total_events_processed sum. Six test functions cover orthogonal correctness properties."
+expert_time_estimate_hours = 2.5
+
+[task]
+name = "consensus-log-repair"
+description = "Debug a broken Raft consensus log replayer that processes cluster communication logs and produces incorrect cluster state summaries due to interacting bugs across parser, state machine, and output formatter modules."
