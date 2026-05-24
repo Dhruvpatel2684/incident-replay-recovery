@@ -1,0 +1,20 @@
+[task]
+name = "incident-replay-recovery"
+description = "Replay recovery runtime producing corrupted timeline exports due to timestamp normalization drift, window boundary overlap, stale cursor resurrection, and checkpoint race conditions"
+
+[task.difficulty]
+level = "medium"
+reasoning = "Requires understanding of timezone offset arithmetic, replay window boundary semantics, cursor lifecycle across retention purges, and checkpoint ordering invariants"
+
+[task.runtime]
+entrypoint = "python3 runtime/run_replay.py"
+language = "python"
+dependencies = "stdlib-only"
+
+[task.validator]
+command = "bash validator/run_audit.sh"
+description = "Behavioral audit verifying timeline ordering, event uniqueness, UTC normalization, cursor consistency, checkpoint monotonicity, window uniqueness, referential integrity, and export determinism"
+
+[task.repair]
+command = "bash repair/run_repair.sh"
+description = "Reconciles replay state by correcting timestamp normalization, rebuilding window boundaries with strict upper-bound semantics, marking orphaned cursors, resetting stale checkpoints, and regenerating exports"

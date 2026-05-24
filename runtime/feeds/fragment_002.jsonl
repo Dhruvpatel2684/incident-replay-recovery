@@ -1,0 +1,12 @@
+{"event_id": "evt-b001", "timestamp": "2024-01-15T15:31:00+05:30", "data": {"service": "metric-collector", "level": "error", "message": "scrape target unreachable", "node": "node-3"}}
+{"event_id": "evt-b002", "timestamp": "2024-01-15T15:32:30+05:30", "data": {"service": "alert-router", "level": "warn", "message": "notification channel saturated", "node": "node-1"}}
+{"event_id": "evt-b003", "timestamp": "2024-01-15T15:34:00+05:30", "data": {"service": "metric-collector", "level": "error", "message": "disk io latency spike on /data", "node": "node-3"}}
+{"event_id": "evt-b004", "timestamp": "2024-01-15T15:35:00+05:30", "data": {"service": "alert-router", "level": "critical", "message": "pager escalation threshold breached", "node": "node-1"}}
+{"event_id": "evt-b005", "timestamp": "2024-01-15T15:35:00+05:30", "data": {"service": "metric-collector", "level": "warn", "message": "memory pressure on collector process", "node": "node-2"}}
+{"event_id": "evt-b006", "timestamp": "2024-01-15T15:36:30+05:30", "data": {"service": "alert-router", "level": "error", "message": "duplicate alert suppression failed", "node": "node-1"}}
+{"event_id": "evt-b007", "timestamp": "2024-01-15T15:38:00+05:30", "data": {"service": "metric-collector", "level": "critical", "message": "cardinality explosion detected", "node": "node-3"}}
+{"event_id": "evt-b008", "timestamp": "2024-01-15T15:39:30+05:30", "data": {"service": "alert-router", "level": "warn", "message": "routing table inconsistency", "node": "node-2"}}
+{"event_id": "evt-b009", "timestamp": "2024-01-15T15:40:00+05:30", "data": {"service": "metric-collector", "level": "info", "message": "scrape recovery on node-3", "node": "node-3"}}
+{"event_id": "evt-b010", "timestamp": "2024-01-15T15:41:30+05:30", "data": {"service": "alert-router", "level": "info", "message": "notification backlog clearing", "node": "node-1"}}
+{"event_id": "evt-b011", "timestamp": "2024-01-15T15:43:00+05:30", "data": {"service": "metric-collector", "level": "warn", "message": "collector restart in progress", "node": "node-2"}}
+{"event_id": "evt-b012", "timestamp": "2024-01-15T15:44:30+05:30", "data": {"service": "alert-router", "level": "info", "message": "escalation policy reset", "node": "node-1"}}

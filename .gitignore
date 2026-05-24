@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+runtime/replay_state.db
+runtime/exports/reconstructed_timeline.jsonl
+runtime/exports/replay_integrity.json
