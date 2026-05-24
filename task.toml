@@ -1,0 +1,40 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "security"
+difficulty = "hard"
+tags = ["security", "incident-response", "sqlite", "replay-recovery", "determinism"]
+
+difficulty_explanation = "The replay recovery runtime contains multiple interacting state defects involving replay window overlap, timezone normalization drift, stale cursor resurrection, checkpoint regression, and nondeterministic event ordering. Repair requires reasoning across SQLite replay state, deterministic reconstruction, retention reconciliation, and replay export integrity."
+
+solution_explanation = "The repair reconciles corrupted replay state without replacing the runtime architecture. It repairs timestamp normalization, rebuilds replay windows deterministically, reconciles stale cursors, stabilizes ordering semantics, repairs checkpoint regressions, and regenerates deterministic replay exports."
+
+verification_explanation = "Validation executes the replay runtime, inspects SQLite replay state, validates replay exports, verifies deterministic replay ordering, checks cursor consistency, replay window uniqueness, UTC normalization correctness, checkpoint monotonicity, and deterministic replay checksum stability."
+
+expert_time_estimate_hours = 2.5
+
+[task]
+name = "incident-replay-recovery"
+description = "Replay recovery runtime producing corrupted timeline exports due to timestamp normalization drift, window boundary overlap, stale cursor resurrection, and checkpoint race conditions"
+
+[task.difficulty]
+level = "hard"
+reasoning = "Requires understanding of timezone offset arithmetic, replay window boundary semantics, cursor lifecycle across retention purges, and checkpoint ordering invariants"
+
+[task.runtime]
+entrypoint = "python3 runtime/run_replay.py"
+language = "python"
+dependencies = "stdlib-only"
+
+[task.validator]
+command = "bash tests/test.sh"
+description = "Behavioral audit verifying timeline ordering, event uniqueness, UTC normalization, cursor consistency, checkpoint monotonicity, window uniqueness, referential integrity, and export determinism"
+
+[task.repair]
+command = "bash solution/solve.sh"
+description = "Reconciles replay state by correcting timestamp normalization, rebuilding window boundaries with strict upper-bound semantics, marking orphaned cursors, resetting stale checkpoints, and regenerating exports"
+
+[task.resources]
+timeout = 300
+cpu = 2
+memory = "2GB"
+disk = "1GB"

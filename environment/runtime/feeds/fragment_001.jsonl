@@ -1,0 +1,15 @@
+{"event_id": "evt-a001", "timestamp": "2024-01-15T10:00:00Z", "data": {"service": "auth-gateway", "level": "error", "message": "connection pool exhausted", "request_id": "req-7741"}}
+{"event_id": "evt-a002", "timestamp": "2024-01-15T10:01:15Z", "data": {"service": "auth-gateway", "level": "warn", "message": "retry backoff triggered", "request_id": "req-7742"}}
+{"event_id": "evt-a003", "timestamp": "2024-01-15T10:02:30Z", "data": {"service": "session-store", "level": "error", "message": "write timeout exceeded 500ms", "request_id": "req-7743"}}
+{"event_id": "evt-a004", "timestamp": "2024-01-15T10:03:45Z", "data": {"service": "auth-gateway", "level": "error", "message": "upstream health check failed", "request_id": "req-7744"}}
+{"event_id": "evt-a005", "timestamp": "2024-01-15T10:05:00Z", "data": {"service": "rate-limiter", "level": "warn", "message": "bucket overflow on tier-2 clients", "request_id": "req-7745"}}
+{"event_id": "evt-a006", "timestamp": "2024-01-15T10:05:00Z", "data": {"service": "auth-gateway", "level": "critical", "message": "circuit breaker open", "request_id": "req-7746"}}
+{"event_id": "evt-a007", "timestamp": "2024-01-15T10:06:30Z", "data": {"service": "session-store", "level": "error", "message": "replication lag exceeded threshold", "request_id": "req-7747"}}
+{"event_id": "evt-a008", "timestamp": "2024-01-15T10:07:45Z", "data": {"service": "auth-gateway", "level": "warn", "message": "token refresh queue depth critical", "request_id": "req-7748"}}
+{"event_id": "evt-a009", "timestamp": "2024-01-15T10:09:00Z", "data": {"service": "rate-limiter", "level": "error", "message": "configuration reload stalled", "request_id": "req-7749"}}
+{"event_id": "evt-a010", "timestamp": "2024-01-15T10:10:00Z", "data": {"service": "auth-gateway", "level": "critical", "message": "full service degradation", "request_id": "req-7750"}}
+{"event_id": "evt-a011", "timestamp": "2024-01-15T10:11:30Z", "data": {"service": "session-store", "level": "warn", "message": "failover initiated to secondary", "request_id": "req-7751"}}
+{"event_id": "evt-a012", "timestamp": "2024-01-15T10:12:45Z", "data": {"service": "auth-gateway", "level": "info", "message": "partial recovery detected", "request_id": "req-7752"}}
+{"event_id": "evt-a013", "timestamp": "2024-01-15T10:14:00Z", "data": {"service": "rate-limiter", "level": "info", "message": "bucket refill stabilized", "request_id": "req-7753"}}
+{"event_id": "evt-a014", "timestamp": "2024-01-15T10:15:00Z", "data": {"service": "auth-gateway", "level": "warn", "message": "connection pool rebuilding", "request_id": "req-7754"}}
+{"event_id": "evt-a015", "timestamp": "2024-01-15T10:16:30Z", "data": {"service": "session-store", "level": "info", "message": "replication caught up", "request_id": "req-7755"}}

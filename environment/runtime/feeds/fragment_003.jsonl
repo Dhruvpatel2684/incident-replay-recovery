@@ -1,0 +1,10 @@
+{"event_id": "evt-c001", "timestamp": "2024-01-15T10:05:00Z", "data": {"service": "deploy-controller", "level": "error", "message": "rollback initiated on canary-7", "deploy_id": "dep-442"}}
+{"event_id": "evt-c002", "timestamp": "2024-01-15T10:07:45+00:00", "data": {"service": "deploy-controller", "level": "warn", "message": "health probe failure rate above 30%", "deploy_id": "dep-442"}}
+{"event_id": "evt-c003", "timestamp": "2024-01-15T10:10:00+00:00", "data": {"service": "deploy-controller", "level": "critical", "message": "canary promotion halted", "deploy_id": "dep-442"}}
+{"event_id": "evt-c004", "timestamp": "2024-01-15T10:12:00+05:30", "data": {"service": "config-sync", "level": "error", "message": "stale config version propagated to edge", "config_rev": "r-881"}}
+{"event_id": "evt-c005", "timestamp": "2024-01-15T10:14:00Z", "data": {"service": "deploy-controller", "level": "info", "message": "rollback complete for canary-7", "deploy_id": "dep-442"}}
+{"event_id": "evt-c006", "timestamp": "2024-01-15T10:15:00+05:30", "data": {"service": "config-sync", "level": "warn", "message": "config reconciliation loop stalled", "config_rev": "r-881"}}
+{"event_id": "evt-c007", "timestamp": "2024-01-15T10:05:00+00:00", "data": {"service": "lb-manager", "level": "warn", "message": "backend pool member flapping", "pool": "pool-east-2"}}
+{"event_id": "evt-c008", "timestamp": "2024-01-15T10:10:00Z", "data": {"service": "lb-manager", "level": "error", "message": "drain timeout exceeded on pool-east-2", "pool": "pool-east-2"}}
+{"event_id": "evt-c009", "timestamp": "2024-01-15T10:16:30+00:00", "data": {"service": "lb-manager", "level": "info", "message": "pool stabilized after member replacement", "pool": "pool-east-2"}}
+{"event_id": "evt-c010", "timestamp": "2024-01-15T10:18:00Z", "data": {"service": "deploy-controller", "level": "info", "message": "deployment sequence resumed", "deploy_id": "dep-443"}}
