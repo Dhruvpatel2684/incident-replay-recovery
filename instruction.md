@@ -52,3 +52,46 @@ The runtime environment already contains the required system-wide Python tooling
 - `/app/runtime/replay_state.db` — SQLite replay state (created during execution)
 - `/app/runtime/exports/` — output artifacts
 - `/app/solution/reconcile_runtime.py` — replay state reconciliation repair script
+
+## JSONL Replay Feed Schema
+
+Each fragment file contains one JSON object per line representing an incident event:
+
+- `event_id` (string) — unique event identifier across all fragments
+- `timestamp` (string) — ISO-8601 timestamp with timezone offset (e.g. `2024-01-15T10:05:00+05:30`)
+- `data` (object) — event payload containing `service`, `level`, `message`, and context-specific fields
+
+Fragments arrive from multiple geographic sources with varying timezone offsets. The runtime normalizes all timestamps to UTC and reconstructs them into deterministic, time-bounded replay windows.
+
+## SQLite Replay State Schema
+
+The runtime persists replay state in `/app/runtime/replay_state.db` across four tables:
+
+**raw_events** — Staging table for ingested events. Stores both the original `timestamp_raw` (as received from the fragment source) and the UTC-normalized `timestamp_norm`. Each event is deduplicated by `event_id` at ingestion time.
+
+**replay_windows** — Time-bounded windows constructed on a fixed grid. Each window holds a JSON array of `event_ids` representing events assigned to that interval. Window status transitions from `active` to expired upon retention cleanup. Correct boundary semantics require exclusive upper bounds to prevent cross-window duplication.
+
+**replay_cursor** — Tracks replay session progress per window. Each cursor binds a `session_id` to a `window_id` with a `position` offset and `checkpoint_ts`. Cursor state should transition to `stale` when its referenced window is purged. Checkpoint timestamps must never regress for a given session/window pair.
+
+**retention_meta** — Records window expiration decisions. Stores the `window_id`, retention cutoff, and purge timestamp. Windows beyond the configured retention horizon are removed, and this table preserves the audit trail.
+
+## Replay Export Schema
+
+The exported timeline at `/app/runtime/exports/reconstructed_timeline.jsonl` contains one JSON object per line:
+
+- `event_id` (string) — the original event identifier
+- `timestamp` (string) — UTC-normalized ISO-8601 timestamp (`+00:00` suffix)
+- `payload` (object) — the original event data
+
+Events are emitted in strict chronological order by `timestamp`. Events sharing an identical timestamp are ordered lexicographically by `event_id` to ensure deterministic output. Each event appears exactly once across all replay windows — no duplicates in the export.
+
+## Integrity Metadata Schema
+
+The file `/app/runtime/exports/replay_integrity.json` contains:
+
+- `sha256` (string) — SHA-256 digest computed over the concatenated JSONL output lines
+- `event_count` (integer) — total number of events in the exported timeline
+- `window_count` (integer) — number of active replay windows contributing to the export
+- `exported_at` (string) — UTC timestamp of when the export was produced
+
+The checksum must remain stable across consecutive runs given identical input feeds and correct replay state.
