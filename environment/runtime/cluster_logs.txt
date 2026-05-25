@@ -57,4 +57,3 @@
 1716000000.302100|node-3|APPEND_ENTRY|term=4,leader=node-3,target=node-2,entry=SET:z=30,prev_log_idx=6
 1716000000.302200|node-1|APPEND_ACK|term=4,from=node-1,log_idx=7,success=true
 1716000000.302300|node-2|APPEND_ACK|term=4,from=node-2,log_idx=7,success=true
-1716000000.302400|node-3|COMMIT|term=4,leader=node-3,commit_idx=7,entry=SET:z=30

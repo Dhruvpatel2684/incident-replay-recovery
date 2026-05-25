@@ -25,7 +25,7 @@ class NodeState:
             "role": self.role,
             "log_length": len(self.log),
             "commit_index": self.commit_index,
-            "committed_entries": self.log[:self.commit_index],
+            "committed_entries": self.log[:self.commit_index + 1],
             "leader_id": self.leader_id,
         }
 
@@ -145,16 +145,13 @@ class ClusterStateMachine:
 
         target_node = self.nodes[target]
 
-        # BUG 5: Calculates the new log index from the SENDER's (leader's)
-        # log length instead of using prev_log_idx + 1. This means if the
-        # leader's log is at a different position than expected, the entry
-        # gets placed at the wrong index in the follower's log.
-        if leader in self.nodes:
-            leader_node = self.nodes[leader]
-            # BUG: Uses leader's current log length as the index basis
-            new_idx = len(leader_node.log)
-        else:
-            new_idx = prev_log_idx + 1
+        # BUG 5: Computes new_idx using prev_log_idx without adding 1.
+        # In Raft, prev_log_idx is the index of the PRECEDING entry, so the
+        # new entry should go at prev_log_idx + 1. Using just prev_log_idx
+        # causes entries to OVERWRITE the previous entry instead of being
+        # appended after it. For the first entry (prev_log_idx=0), this puts
+        # it at index 0 instead of index 1, eliminating the NULL prefix.
+        new_idx = prev_log_idx  # BUG: should be prev_log_idx + 1
 
         # Append entry to target's log at the calculated position
         # If log is shorter than expected, pad with None entries
@@ -167,12 +164,31 @@ class ClusterStateMachine:
             target_node.log[new_idx] = (term, entry)
 
         # Also append to leader's own log (leader tracks its own entries)
+        # BUG 5b: The guard condition uses `prev_log_idx` to decide whether
+        # to append to the leader's log, but it checks against the CURRENT
+        # log length AFTER potentially modifying it from a previous
+        # APPEND_ENTRY to the other follower in the same batch. This means
+        # for the SECOND follower's append message (same entry, same
+        # prev_log_idx), the guard may incorrectly trigger a duplicate
+        # append because len(leader_node.log) has already grown.
+        # The correct approach: only append if the entry at prev_log_idx+1
+        # doesn't already exist in the leader's log.
         if leader in self.nodes:
             leader_node = self.nodes[leader]
-            if prev_log_idx == len(leader_node.log) - 1 or len(leader_node.log) <= prev_log_idx:
+            expected_new_idx = prev_log_idx + 1
+            if len(leader_node.log) <= prev_log_idx:
+                # Leader log is behind - pad and append
                 while len(leader_node.log) <= prev_log_idx:
                     leader_node.log.append(None)
                 leader_node.log.append((term, entry))
+            elif len(leader_node.log) == expected_new_idx:
+                # Leader log is exactly at the right spot - append
+                leader_node.log.append((term, entry))
+            # BUG 5b: Missing the case where len > expected_new_idx
+            # (entry already exists). In this case we should do nothing,
+            # but the elif above catches ONLY the == case. If another
+            # code path sets the leader log to exactly expected_new_idx
+            # between the two APPEND messages, this double-appends.
 
     def _handle_append_ack(self, event):
         """Follower acknowledges a log entry."""

@@ -33,13 +33,13 @@ def load_integrity():
 def test_commit_count_matches_event_count():
     """
     The total_commits field must equal the number of COMMIT events in the log.
-    There are exactly 7 COMMIT events in cluster_logs.txt (commits for indices
-    1 through 7). Each COMMIT event represents one entry being committed
-    cluster-wide, so total_commits must be 7.
+    There are exactly 6 COMMIT events in cluster_logs.txt (commits for indices
+    1 through 6). Each COMMIT event represents one entry being committed
+    cluster-wide, so total_commits must be 6.
     """
     integrity = load_integrity()
-    assert integrity["total_commits"] == 7, (
-        f"Expected total_commits=7 (one per COMMIT event), "
+    assert integrity["total_commits"] == 6, (
+        f"Expected total_commits=6 (one per COMMIT event), "
         f"got {integrity['total_commits']}"
     )
 
@@ -63,11 +63,11 @@ def test_consistency_hash_deterministic():
     The consistency_hash must be computed from nodes in sorted order
     (node-1, node-2, node-3) with correct state values. This ensures
     deterministic output regardless of internal dict ordering.
-    Expected hash: 5b819d9c3b5e3642
+    Expected hash: 066bdf57a78828c6
     """
     integrity = load_integrity()
-    assert integrity["consistency_hash"] == "5b819d9c3b5e3642", (
-        f"Expected consistency_hash='5b819d9c3b5e3642', "
+    assert integrity["consistency_hash"] == "066bdf57a78828c6", (
+        f"Expected consistency_hash='066bdf57a78828c6', "
         f"got '{integrity['consistency_hash']}'"
     )
 
@@ -77,7 +77,8 @@ def test_uniform_log_length_across_nodes():
     All three nodes must have identical log_length values. Since every
     APPEND_ENTRY in the log is successfully ACK'd by all followers,
     all nodes should converge to the same log length of 8 entries
-    (1 null prefix + 7 committed entries).
+    (1 null prefix + 6 committed entries + 1 uncommitted entry).
+    Commit index should be 6 for all (last COMMIT was for index 6).
     """
     records = load_cluster_state()
     log_lengths = {r["node_id"]: r["log_length"] for r in records}
@@ -95,14 +96,22 @@ def test_uniform_log_length_across_nodes():
         f"Log lengths are not uniform: {log_lengths}"
     )
 
+    # Commit index must be 6 for all nodes
+    for record in records:
+        assert record["commit_index"] == 6, (
+            f"Expected commit_index=6 for {record['node_id']}, "
+            f"got {record['commit_index']}"
+        )
+
 
 def test_committed_entries_complete():
     """
-    Each node's committed_entries must contain the full sequence of
-    7 committed operations. The entries should be:
+    Each node's committed_entries must contain all entries through
+    commit_index=6. The last entry at index 7 (SET:z=30) was replicated
+    but never committed (no COMMIT event for it in the log).
+    Expected entries (indices 0-6):
     NULL, term1:SET:x=1, term1:SET:y=2, term1:SET:z=3,
     term2:SET:x=10, term2:SET:w=5, term4:SET:y=20
-    (The NULL at index 0 is expected since log indexing starts at 1.)
     """
     expected_entries = [
         "NULL",

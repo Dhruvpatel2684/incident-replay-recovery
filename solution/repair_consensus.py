@@ -111,7 +111,7 @@ class NodeState:
             "role": self.role,
             "log_length": len(self.log),
             "commit_index": self.commit_index,
-            "committed_entries": self.log[:self.commit_index],
+            "committed_entries": self.log[:self.commit_index + 1],
             "leader_id": self.leader_id,
         }
 

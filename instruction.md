@@ -56,7 +56,7 @@ A single JSON object with summary statistics:
 
 The operations team reports these issues when running the replayer:
 
-1. **Inflated commit count**: The `total_commits` in `integrity.json` shows a value roughly 3× higher than the actual number of COMMIT events in the log. There are 7 COMMIT events in the input, but the output reports 21.
+1. **Inflated commit count**: The `total_commits` in `integrity.json` shows a value roughly 3× higher than the actual number of COMMIT events in the log. There are 6 COMMIT events in the input, but the output reports 18.
 
 2. **Missing split vote detection**: The cluster log contains a failed election in term 3 where a candidate received only its own self-vote (1 vote) and failed to reach quorum. However, `split_votes` reports 0 instead of 1.
 
@@ -64,22 +64,22 @@ The operations team reports these issues when running the replayer:
 
 4. **Non-deterministic hash**: The `consistency_hash` changes between runs on different Python implementations, suggesting the computation depends on iteration order rather than a canonical ordering.
 
-5. **Incorrect committed entries**: The `committed_entries` arrays should contain all 7 committed operations in order, but some nodes show `NULL` gaps and are missing the final entries from term 4.
+5. **Incorrect committed entries**: The `committed_entries` arrays should contain only entries that have been committed (i.e., entries for which a COMMIT event exists in the log). Some nodes show `NULL` gaps and wrong entries in their committed_entries arrays.
 
-6. **Wrong total events**: The `total_events_processed` (sum of log lengths) is 25 when it should be 24 (8 entries × 3 nodes = 24 for a fully-replicated 7-entry log with 1 null prefix).
+6. **Wrong total events**: The `total_events_processed` (sum of log lengths) is 22 when it should be 24 (8 entries × 3 nodes = 24 for a fully-replicated log).
 
 ## Correct Expected Values
 
 When functioning correctly, the system should produce:
 
-- `total_commits`: **7**
+- `total_commits`: **6**
 - `leader_elections`: **3**
 - `split_votes`: **1**
-- `consistency_hash`: **`5b819d9c3b5e3642`**
+- `consistency_hash`: **`066bdf57a78828c6`**
 - `total_events_processed`: **24**
 - `final_term`: **4**
-- All three nodes should have `log_length`: **8** and `commit_index`: **7**
-- All nodes' `committed_entries` should be identical (7 entries plus 1 NULL prefix)
+- All three nodes should have `log_length`: **8** and `commit_index`: **6**
+- All nodes' `committed_entries` should be identical (6 committed operations plus 1 NULL prefix = 7 entries; the uncommitted entry at index 7 must NOT be included)
 
 ## Available Tooling
 
