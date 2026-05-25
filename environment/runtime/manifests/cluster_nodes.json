@@ -1,0 +1,217 @@
+[
+  {
+    "node_id": "web-prod-01",
+    "status": "active",
+    "region": "us-east-1",
+    "config": {
+      "service": "nginx",
+      "listen_port": "8080",
+      "max_connections": "1024",
+      "workers": "4",
+      "timeout_seconds": "30",
+      "tls": {
+        "enabled": true,
+        "cert_path": "/etc/ssl/certs/web.pem",
+        "min_version": "1.2"
+      },
+      "logging": {
+        "level": "info",
+        "output": "/var/log/nginx/access.log",
+        "rotate_days": 7
+      },
+      "dns_servers": [
+        "10.0.0.2 ",
+        "10.0.0.3",
+        "10.0.1.2"
+      ],
+      "tags": [
+        "production",
+        "web",
+        "frontend"
+      ]
+    }
+  },
+  {
+    "node_id": "web-prod-02",
+    "status": "active",
+    "region": "us-east-1",
+    "config": {
+      "service": "nginx",
+      "listen_port": "8080",
+      "max_connections": "1024",
+      "workers": "8",
+      "timeout_seconds": "30",
+      "tls": {
+        "enabled": true,
+        "cert_path": "/etc/ssl/certs/web.pem",
+        "min_version": "1.2"
+      },
+      "logging": {
+        "level": "warn",
+        "output": "/var/log/nginx/access.log",
+        "rotate_days": 7
+      },
+      "dns_servers": [
+        "10.0.0.2",
+        "10.0.0.3"
+      ],
+      "tags": [
+        "production",
+        "web",
+        "frontend"
+      ]
+    }
+  },
+  {
+    "node_id": "db-prod-01",
+    "status": "active",
+    "region": "us-east-1",
+    "config": {
+      "service": "postgresql",
+      "listen_port": "5432",
+      "max_connections": "200",
+      "shared_buffers": "2GB",
+      "wal_level": "replica",
+      "replication": {
+        "enabled": true,
+        "max_wal_senders": "5",
+        "synchronous_commit": "on"
+      },
+      "dns_servers": [
+        "10.0.0.2",
+        "10.0.0.3"
+      ],
+      "tags": [
+        "production",
+        "database",
+        "primary"
+      ],
+      "ntp_servers": [
+        "time1.internal",
+        "time2.internal"
+      ]
+    }
+  },
+  {
+    "node_id": "db-prod-02",
+    "status": "active",
+    "region": "us-west-2",
+    "config": {
+      "service": "postgresql",
+      "listen_port": "5432",
+      "max_connections": "200",
+      "shared_buffers": "2GB",
+      "wal_level": "replica",
+      "replication": {
+        "enabled": true,
+        "max_wal_senders": "5",
+        "synchronous_commit": "on"
+      },
+      "dns_servers": [
+        "10.0.1.2",
+        "10.0.1.3"
+      ],
+      "tags": [
+        "production",
+        "database",
+        "replica"
+      ],
+      "ntp_servers": [
+        "time1.internal",
+        "time2.internal"
+      ]
+    }
+  },
+  {
+    "node_id": "cache-prod-01",
+    "status": "active",
+    "region": "us-east-1",
+    "config": {
+      "service": "redis",
+      "listen_port": "6379",
+      "max_connections": "500",
+      "maxmemory": "4GB",
+      "eviction_policy": "allkeys-lru",
+      "persistence": {
+        "rdb_enabled": true,
+        "aof_enabled": false,
+        "save_interval": "300"
+      },
+      "dns_servers": [
+        "10.0.0.2",
+        "10.0.0.3"
+      ],
+      "tags": [
+        "production",
+        "cache"
+      ]
+    }
+  },
+  {
+    "node_id": "worker-prod-01",
+    "status": "active",
+    "region": "us-east-1",
+    "config": {
+      "service": "celery",
+      "workers": "16",
+      "timeout_seconds": "120",
+      "queue": "default",
+      "broker": "redis://cache-prod-01:6379/0",
+      "concurrency": {
+        "prefetch_multiplier": 4,
+        "max_tasks_per_child": "1000"
+      },
+      "dns_servers": [
+        "10.0.0.2",
+        "10.0.0.3"
+      ],
+      "tags": [
+        "production",
+        "worker",
+        "async"
+      ]
+    }
+  },
+  {
+    "node_id": "legacy-app-01",
+    "status": "decommissioned",
+    "region": "us-east-1",
+    "config": {
+      "service": "tomcat",
+      "listen_port": "8443",
+      "max_connections": "100",
+      "java_opts": "-Xmx512m",
+      "dns_servers": [
+        "10.0.0.2"
+      ],
+      "tags": [
+        "legacy",
+        "deprecated"
+      ]
+    }
+  },
+  {
+    "node_id": "monitor-prod-01",
+    "status": "active",
+    "region": "us-east-1",
+    "config": {
+      "service": "prometheus",
+      "listen_port": "9090",
+      "retention_days": "30",
+      "scrape_interval": "15s",
+      "storage": {
+        "path": "/var/lib/prometheus",
+        "max_disk_gb": "100"
+      },
+      "dns_servers": [
+        "10.0.0.2",
+        "10.0.0.3"
+      ],
+      "tags": [
+        "production",
+        "monitoring",
+        "observability"
+      ]
+    }
+  }
+]
