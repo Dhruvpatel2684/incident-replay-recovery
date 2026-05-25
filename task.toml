@@ -1,0 +1,26 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "networking"
+difficulty = "hard"
+tags = ["networking", "dns", "zone-resolution", "caching", "python"]
+
+difficulty_explanation = "The resolver contains 5 interacting defects: an off-by-one in CNAME chain depth limiting, reversed wildcard/exact match precedence violating RFC 4592, a TTL cache expiration multiplier error, broken RFC 1982 serial number wrapping in zone loading, and incorrect query type propagation through CNAME chains. The serial wrapping bug prevents an entire zone from loading, masking other bugs until fixed."
+
+solution_explanation = "The repair implements RFC 1982 serial arithmetic for zone loading, swaps wildcard and exact match precedence order, fixes the CNAME depth boundary condition, removes the erroneous TTL multiplier, and corrects query type handling for intermediate CNAME hops. After patching, the resolver is re-executed to regenerate output."
+
+verification_explanation = "Validation verifies zone loading completeness, exact-over-wildcard resolution precedence, CNAME chain resolution at the configured depth boundary, MX resolution through CNAME indirection, TTL presence in results, and output integrity hash consistency."
+
+expert_time_estimate_hours = 2.5
+
+[task]
+name = "dns-zone-resolver"
+description = "Repair a DNS zone file resolver with interacting defects in serial comparison, wildcard precedence, CNAME chain following, cache TTL arithmetic, and query type propagation"
+
+[environment]
+dockerfile = "environment/Dockerfile"
+
+[solution]
+solve_script = "solution/solve.sh"
+
+[tests]
+test_script = "tests/test.sh"
