@@ -19,14 +19,14 @@ class NodeState:
         self.leader_id = None
 
     def to_dict(self):
-        """Serialize node state. committed_entries includes entries up to commit_index."""
+        """Serialize node state. committed_entries includes entries through commit_index."""
         return {
             "node_id": self.node_id,
             "term": self.term,
             "role": self.role,
             "log_length": len(self.log),
             "commit_index": self.commit_index,
-            "committed_entries": self.log[:self.commit_index],
+            "committed_entries": self.log[:self.commit_index + 1],
             "leader_id": self.leader_id,
         }
 
@@ -163,7 +163,7 @@ class ClusterStateMachine:
                 while len(leader_node.log) <= prev_log_idx:
                     leader_node.log.append(None)
                 leader_node.log.append((term, entry))
-            elif len(leader_node.log) <= expected_new_idx:
+            elif len(leader_node.log) == expected_new_idx:
                 leader_node.log.append((term, entry))
 
     def _handle_append_ack(self, event):
