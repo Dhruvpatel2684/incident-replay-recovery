@@ -1,0 +1,12 @@
+$TTL 300
+internal.dev.       IN  SOA   ns1.internal.dev. admin.internal.dev. 2024010100 3600 900 604800 300
+internal.dev.       IN  NS    ns1.internal.dev.
+internal.dev.       IN  A     10.0.0.1
+ns1.internal.dev.   IN  A     10.0.0.2
+
+; Exact match for app
+app.internal.dev.   IN  A     10.0.0.50
+db.internal.dev.    IN  A     10.0.0.60
+
+; Wildcard
+*.internal.dev.     IN  A     10.0.0.100
