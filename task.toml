@@ -1,0 +1,9 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "data-engineering"
+difficulty = "hard"
+tags = ["state-recovery", "data-pipelines", "crash-consistency", "sharding", "deduplication", "checksums"]
+difficulty_explanation = "Requires reasoning about corrupted state files that interact with each other. The agent must understand how checkpoints, dedup registries, sequence counters, and shard assignments interact, then write a repair script that computes correct state from raw data. Cannot be solved by simple code inspection — requires algorithmic reasoning about data integrity."
+solution_explanation = "The repair script reads raw partition files to determine valid event IDs, cleans phantom entries from the dedup registry, resets corrupted checkpoints and sequence counters to clean state, removes incomplete shard files, then re-runs the pipeline which correctly processes all 75 events into 4 shards with proper deduplication, sequencing, and manifest checksums."
+verification_explanation = "18 pytest tests verify: all 75 events are present across shards, shard assignment matches deterministic hash, no duplicates exist, sequence numbers are contiguous 1..75, dedup registry contains only valid event IDs, checkpoints reflect actual processing state, manifest checksums match shard file contents, and shard_3 exists with correct events."
+expert_time_estimate_hours = 2.5
