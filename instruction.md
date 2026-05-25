@@ -13,8 +13,8 @@ The object store at `/app/runtime/store/` uses content-addressable storage where
 - **Commits**: metadata referencing a tree and optional parent commit, hashed as `SHA1("commit <length>\0<content>")`
 
 The store also maintains:
-- `store/refs/HEAD`: points to the latest commit hash
-- `store/index.json`: maps file paths to their blob hashes (staging area)
+- `/app/runtime/store/refs/HEAD`: points to the latest commit hash
+- `/app/runtime/store/index.json`: maps file paths to their blob hashes (staging area)
 
 ## Ground Truth
 
