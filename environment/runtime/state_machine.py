@@ -141,9 +141,8 @@ class ClusterStateMachine:
 
         target_node = self.nodes[target]
 
-        # Position new entry relative to previous log index.
-        # prev_log_idx references the slot before the new entry.
-        new_idx = prev_log_idx  # index for the new entry placement
+        # Position new entry after the previous log index
+        new_idx = prev_log_idx + 1
 
         # Place entry at calculated position, padding if needed
         while len(target_node.log) < new_idx:
