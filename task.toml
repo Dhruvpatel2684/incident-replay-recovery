@@ -1,0 +1,9 @@
+author_name = "Harbor Task Author"
+author_email = "author@harbor-tasks.dev"
+category = "Security"
+difficulty = "hard"
+tags = ["pki", "certificates", "chain-of-trust", "validation", "security-audit", "json", "bitmask"]
+difficulty_explanation = "Requires understanding PKI trust chains, certificate validation semantics (expiration boundaries, key usage bitmasks), revocation propagation, and chain depth calculation. Five interrelated bugs must be identified and fixed."
+solution_explanation = "The repair script fixes: (1) chain builder DN matching from CN to full DN, (2) expiration boundary from <= to <, (3) key usage from OR-nonzero to AND-equality, (4) revocation propagation to check intermediates, (5) chain depth off-by-one for self-signed roots. After patching, re-execution produces correct audit output."
+verification_explanation = "Tests validate the output JSONL and summary JSON files. They check chain linking correctness, expiration boundary handling, key usage enforcement, revocation propagation, self-signed root depth validity, SHA-256 integrity, and correct valid/invalid/expired/revoked counts."
+expert_time_estimate_hours = 1.5

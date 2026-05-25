@@ -1,0 +1,93 @@
+[
+  {
+    "serial": "01:AA:BB:CC:DD:EE:FF:00",
+    "subject_cn": "Certificate Authority",
+    "subject_dn": "CN=Certificate Authority,O=GlobalRoot,C=US",
+    "issuer_cn": "Certificate Authority",
+    "issuer_dn": "CN=Certificate Authority,O=GlobalRoot,C=US",
+    "not_before": "2020-01-01T00:00:00Z",
+    "not_after": "2030-12-31T23:59:59Z",
+    "key_usage": 12,
+    "is_ca": true,
+    "revoked": false,
+    "self_signed": true
+  },
+  {
+    "serial": "02:11:22:33:44:55:66:77",
+    "subject_cn": "Certificate Authority",
+    "subject_dn": "CN=Certificate Authority,O=SecureSign,C=US",
+    "issuer_cn": "Certificate Authority",
+    "issuer_dn": "CN=Certificate Authority,O=GlobalRoot,C=US",
+    "not_before": "2021-03-01T00:00:00Z",
+    "not_after": "2028-06-15T23:59:59Z",
+    "key_usage": 12,
+    "is_ca": true,
+    "revoked": false,
+    "self_signed": false
+  },
+  {
+    "serial": "03:AA:BB:CC:DD:11:22:33",
+    "subject_cn": "Dev Signing CA",
+    "subject_dn": "CN=Dev Signing CA,O=SecureSign,C=US",
+    "issuer_cn": "Certificate Authority",
+    "issuer_dn": "CN=Certificate Authority,O=SecureSign,C=US",
+    "not_before": "2022-01-01T00:00:00Z",
+    "not_after": "2027-03-01T00:00:00Z",
+    "key_usage": 12,
+    "is_ca": true,
+    "revoked": true,
+    "self_signed": false
+  },
+  {
+    "serial": "04:DE:AD:BE:EF:CA:FE:01",
+    "subject_cn": "api.example.com",
+    "subject_dn": "CN=api.example.com,O=ExampleCorp,C=US",
+    "issuer_cn": "Certificate Authority",
+    "issuer_dn": "CN=Certificate Authority,O=SecureSign,C=US",
+    "not_before": "2024-01-01T00:00:00Z",
+    "not_after": "2025-06-15T12:00:00Z",
+    "key_usage": 3,
+    "is_ca": false,
+    "revoked": false,
+    "self_signed": false
+  },
+  {
+    "serial": "05:FE:DC:BA:98:76:54:32",
+    "subject_cn": "dev.internal.io",
+    "subject_dn": "CN=dev.internal.io,O=DevTeam,C=US",
+    "issuer_cn": "Dev Signing CA",
+    "issuer_dn": "CN=Dev Signing CA,O=SecureSign,C=US",
+    "not_before": "2023-06-01T00:00:00Z",
+    "not_after": "2026-01-01T00:00:00Z",
+    "key_usage": 1,
+    "is_ca": false,
+    "revoked": false,
+    "self_signed": false
+  },
+  {
+    "serial": "06:AB:CD:EF:01:23:45:67",
+    "subject_cn": "legacy.corp.net",
+    "subject_dn": "CN=legacy.corp.net,O=LegacyCorp,C=US",
+    "issuer_cn": "Certificate Authority",
+    "issuer_dn": "CN=Certificate Authority,O=SecureSign,C=US",
+    "not_before": "2023-01-01T00:00:00Z",
+    "not_after": "2025-05-25T12:00:00Z",
+    "key_usage": 3,
+    "is_ca": false,
+    "revoked": false,
+    "self_signed": false
+  },
+  {
+    "serial": "07:99:88:77:66:55:44:33",
+    "subject_cn": "signing.example.com",
+    "subject_dn": "CN=signing.example.com,O=ExampleCorp,C=US",
+    "issuer_cn": "Certificate Authority",
+    "issuer_dn": "CN=Certificate Authority,O=SecureSign,C=US",
+    "not_before": "2024-03-01T00:00:00Z",
+    "not_after": "2026-12-31T23:59:59Z",
+    "key_usage": 1,
+    "is_ca": false,
+    "revoked": false,
+    "self_signed": false
+  }
+]
