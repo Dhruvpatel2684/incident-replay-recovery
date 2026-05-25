@@ -1,0 +1,25 @@
+[task]
+name = "audio-mixer-repair"
+domain = "Signal Processing / Audio DSP"
+difficulty = "hard"
+description = "Debug a multi-channel audio mixing pipeline that produces incorrect stereo output with wrong levels, pan distribution, and integrity checksum"
+
+[environment]
+dockerfile = "environment/Dockerfile"
+runtime_dir = "environment/runtime"
+
+[solution]
+script = "solution/solve.sh"
+oracle = "solution/repair_mixer.py"
+
+[tests]
+script = "tests/test.sh"
+test_file = "tests/test_mixer.py"
+framework = "pytest"
+expected_pass = 15
+minimum_buggy_failures = 8
+
+[bugs]
+count = 7
+files = ["environment/runtime/gain_stage.py", "environment/runtime/mix_engine.py", "environment/runtime/output_stage.py"]
+categories = ["gain interpolation", "unit conversion", "trigonometric domain", "off-by-one", "bounds checking", "statistical method", "data ordering"]
