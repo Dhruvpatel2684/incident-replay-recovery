@@ -25,7 +25,7 @@ The sync engine runs without crashing but produces garbage:
 
 1. **Diff detection returns empty set** -- even though replicas clearly have different values for several keys, the Merkle tree comparison says everything is identical. The tree hashes shouldn't match when values diverge, but somehow they do.
 
-2. **When I hack past the diff issue, wrong winners get picked** -- keys where replica A clearly has the newer vector clock are resolving to replica B's value instead. I checked the data three times. A dominates B's vclock on those keys. But the resolver picks B anyway. There's a `vclock_dominates` function right there in the file that looks correct, so I have no idea why resolution is wrong.
+2. **When I hack past the diff issue, wrong winners get picked** -- keys where replica B clearly has the newer vector clock are resolving to replica A's value instead. I checked the data three times. B dominates A's vclock on those keys. But the resolver picks A anyway. There's a `vclock_dominates` function right there in the file that looks correct, so I have no idea why resolution is wrong.
 
 3. **Deleted keys keep coming back** -- we have tombstoned keys where the deletion causally dominates the live version. The tombstone's vector clock is strictly greater. But the merged output still has those keys alive. It's like tombstones are being ignored entirely.
 
