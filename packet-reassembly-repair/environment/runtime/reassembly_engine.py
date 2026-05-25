@@ -53,7 +53,7 @@ def run_reassembly():
 
         # Get reassembled stream
         stream_bytes = buffer.get_stream_bytes()
-        stream_length = buffer.get_stream_length()
+        stream_length = buffer.get_next_expected_seq()
         gaps = buffer.get_gaps()
         has_gaps = len(gaps) > 0
         checksum = checksum_validator.compute_stream_checksum(stream_bytes)
