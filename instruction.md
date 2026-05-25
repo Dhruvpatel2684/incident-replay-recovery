@@ -66,15 +66,15 @@ The commit's filename is: `SHA1("commit " + str(len(commit_content)) + "\0" + co
 A plain text file containing exactly the 40-character hex commit hash with no trailing newline.
 
 ### index.json format
-A JSON object where keys are relative file paths and values are 40-character hex blob hashes:
+A JSON object where keys are relative file paths (as used within the project) and values are 40-character hex blob hashes. The file is located at `/app/runtime/store/index.json`:
 ```json
 {
-  "README.md": "<sha1-hash-of-readme-blob>",
-  "config.json": "<sha1-hash-of-config-blob>",
-  "lib/constants.py": "<sha1-hash-of-constants-blob>",
-  "lib/helper.py": "<sha1-hash-of-helper-blob>",
-  "main.py": "<sha1-hash-of-main-blob>",
-  "utils.py": "<sha1-hash-of-utils-blob>"
+  "README.md": "b6621125560033726e961546970bf8e05a0c08b1",
+  "config.json": "a79087242d28f7592e8444dce02cbaf2d1d2d4a7",
+  "lib/constants.py": "f285eaa9a352558471d086846ece8527dd85efff",
+  "lib/helper.py": "2fe4db7314de8f784edf5ca27e8282861a82651a",
+  "main.py": "bd4f4e160c91ef5e8653b4ff2716e5c331209e60",
+  "utils.py": "04e19d8b8de9e9f6ff596fb0695eced6f571a400"
 }
 ```
 All 6 source file paths must be present. Each value must be the correct SHA-1 blob hash for that file's current content.
@@ -82,14 +82,18 @@ All 6 source file paths must be present. Each value must be the correct SHA-1 bl
 ## Ground Truth
 
 The original source files are preserved at `/app/runtime/source_files/`. These represent the correct current state of the project:
-- `main.py`, `utils.py`, `config.json`, `README.md`
-- `lib/helper.py`, `lib/constants.py`
+- `/app/runtime/source_files/main.py`
+- `/app/runtime/source_files/utils.py`
+- `/app/runtime/source_files/config.json`
+- `/app/runtime/source_files/README.md`
+- `/app/runtime/source_files/lib/helper.py`
+- `/app/runtime/source_files/lib/constants.py`
 
 ## Expected Store Structure After Repair
 
 The repaired store must contain:
-- **At least 6 blob objects**: one for each current source file, where the filename equals the SHA-1 hash of the file's content (computed with the blob header). A 7th blob for the historical version of main.py (from commit 1) may also be present.
-- **3 tree objects**: a `lib/` subtree (2 entries: constants.py, helper.py sorted alphabetically), the current root tree (5 entries: README.md, config.json, lib, main.py, utils.py sorted alphabetically), and the historical root tree from commit 1 (same 5 entries but references the old main.py blob)
+- **At least 6 blob objects**: one for each current source file, where the filename equals the SHA-1 hash of the file's content (computed with the blob header). A 7th blob for the historical version of `/app/runtime/source_files/main.py` (from commit 1) may also be present.
+- **3 tree objects**: a `lib/` subtree (2 entries: `constants.py`, `helper.py` sorted alphabetically), the current root tree (5 entries: `README.md`, `config.json`, `lib`, `main.py`, `utils.py` sorted alphabetically), and the historical root tree from commit 1 (same 5 entries but references the old `/app/runtime/source_files/main.py` blob)
 - **2 commit objects**: an initial commit (no parent line, references the historical root tree, message "Initial commit") and a latest commit (has parent pointing to the initial commit, references the current root tree, message "Update main.py with data processing")
 - **refs/HEAD**: must contain the hash of the latest commit (the one WITH a parent line)
 - **index.json**: must map all 6 paths to their correct current blob hashes
