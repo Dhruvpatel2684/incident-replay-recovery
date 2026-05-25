@@ -1,0 +1,13 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "scheduling"
+difficulty = "hard"
+tags = ["scheduler", "resource-allocation", "preemption", "priority-queue", "replay", "capacity-planning", "debugging"]
+difficulty_explanation = "Requires understanding resource pool accounting semantics (preemption returns vs deducts), allocation tracking (granted vs requested), priority inversion in preemption eligibility, and time-weighted utilization computation. Four interacting bugs span resource management, priority resolution, and metric computation."
+solution_explanation = "The oracle re-processes the execution log with correct preemption resource return (+= not -=), granted-amount tracking, strictly-greater priority comparison, and time-weighted average utilization."
+verification_explanation = "14 tests in 4 tiers: structural checks pass with buggy code, resource accounting tests need Bugs 1-2 fixed, preemption tests need Bug 3 fixed, and utilization/hash tests need all 4 bugs fixed."
+expert_time_estimate_hours = 2.5
+
+[task]
+name = "scheduler-replay-repair"
+description = "Debug a broken task scheduler replay engine that incorrectly reconstructs resource allocation state due to bugs in pool accounting, allocation tracking, priority comparison, and utilization computation."

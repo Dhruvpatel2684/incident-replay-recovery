@@ -1,0 +1,48 @@
+# Scheduler Execution Log - Cluster: prod-east-1
+# Format: TIMESTAMP|EVENT|TASK_ID|PRIORITY|RESOURCES|DETAILS
+# Pool capacities: cpu=32, mem=65536, gpu=4, network=10000
+1000|SUBMIT|task_001|MEDIUM|cpu=8,mem=16384,gpu=1,network=2000|batch processing job
+1001|ALLOCATE|task_001|MEDIUM|cpu=8,mem=16384,gpu=1,network=2000|full allocation granted
+1010|SUBMIT|task_002|HIGH|cpu=8,mem=16384,gpu=2,network=2500|real-time analytics pipeline
+1011|ALLOCATE|task_002|HIGH|cpu=8,mem=16384,gpu=2,network=2500|full allocation granted
+1020|SUBMIT|task_003|MEDIUM|cpu=6,mem=8192,gpu=1,network=1500|data transformation job
+1021|ALLOCATE|task_003|MEDIUM|cpu=6,mem=8192,gpu=1,network=1500|full allocation granted
+1030|SUBMIT|task_004|LOW|cpu=4,mem=4096,gpu=0,network=1000|log aggregation worker
+1031|ALLOCATE|task_004|LOW|cpu=4,mem=4096,gpu=0,network=1000|full allocation granted
+1040|SUBMIT|task_005|CRITICAL|cpu=10,mem=24576,gpu=1,network=3500|incident response automation
+1041|PREEMPT|task_003|MEDIUM|cpu=6,mem=8192,gpu=1,network=1500|preempted by task_005 (CRITICAL > MEDIUM)
+1042|ALLOCATE|task_005|CRITICAL|cpu=10,mem=24576,gpu=1,network=3500|full allocation after preemption
+1050|SUBMIT|task_006|MEDIUM|cpu=4,mem=8192,gpu=1,network=2000|model training pipeline
+1051|ALLOCATE|task_006|MEDIUM|cpu=4,mem=8192,gpu=1,network=2000|partial allocation - making best effort with constrained pools
+1060|SUBMIT|task_008|CRITICAL|cpu=8,mem=16384,gpu=2,network=2500|security scan escalation
+1061|PREEMPT|task_002|HIGH|cpu=8,mem=16384,gpu=2,network=2500|preempted by task_008 (CRITICAL > HIGH)
+1062|ALLOCATE|task_008|CRITICAL|cpu=8,mem=16384,gpu=2,network=2500|full allocation after preemption
+1070|SUBMIT|task_009|HIGH|cpu=4,mem=4096,gpu=0,network=1000|priority queue processor
+1071|PREEMPT|task_004|LOW|cpu=4,mem=4096,gpu=0,network=1000|preempted by task_009 (HIGH > LOW)
+1072|ALLOCATE|task_009|HIGH|cpu=4,mem=4096,gpu=0,network=1000|full allocation after preemption
+1080|RELEASE|task_005|CRITICAL|cpu=10,mem=24576,gpu=1,network=3500|task completed successfully
+1081|COMPLETE|task_005|CRITICAL|cpu=0,mem=0,gpu=0,network=0|duration=38s
+1090|SUBMIT|task_007|LOW|cpu=12,mem=32768,gpu=2,network=4000|background indexing
+1091|ALLOCATE|task_007|LOW|cpu=12,mem=32768,gpu=2,network=4000|partial allocation - making best effort with constrained pools
+1100|RELEASE|task_008|CRITICAL|cpu=8,mem=16384,gpu=2,network=2500|task completed successfully
+1101|COMPLETE|task_008|CRITICAL|cpu=0,mem=0,gpu=0,network=0|duration=38s
+1110|SUBMIT|task_010|HIGH|cpu=2,mem=4096,gpu=0,network=500|metrics aggregator
+1111|ALLOCATE|task_010|HIGH|cpu=2,mem=4096,gpu=0,network=500|full allocation granted
+1120|SUBMIT|task_011|MEDIUM|cpu=4,mem=8192,gpu=1,network=1000|data export job
+1121|ALLOCATE|task_011|MEDIUM|cpu=4,mem=8192,gpu=1,network=1000|full allocation granted
+1130|SUBMIT|task_012|LOW|cpu=2,mem=4096,gpu=0,network=500|cleanup daemon
+1131|ALLOCATE|task_012|LOW|cpu=2,mem=4096,gpu=0,network=500|full allocation granted
+1140|RELEASE|task_001|MEDIUM|cpu=8,mem=16384,gpu=1,network=2000|task completed successfully
+1141|COMPLETE|task_001|MEDIUM|cpu=0,mem=0,gpu=0,network=0|duration=139s
+1150|RELEASE|task_009|HIGH|cpu=4,mem=4096,gpu=0,network=1000|task completed successfully
+1151|COMPLETE|task_009|HIGH|cpu=0,mem=0,gpu=0,network=0|duration=78s
+1160|RELEASE|task_006|MEDIUM|cpu=4,mem=8192,gpu=1,network=2000|task completed successfully
+1161|COMPLETE|task_006|MEDIUM|cpu=0,mem=0,gpu=0,network=0|duration=109s
+1170|RELEASE|task_010|HIGH|cpu=2,mem=4096,gpu=0,network=500|task completed successfully
+1171|COMPLETE|task_010|HIGH|cpu=0,mem=0,gpu=0,network=0|duration=59s
+1180|RELEASE|task_007|LOW|cpu=12,mem=32768,gpu=2,network=4000|task completed successfully
+1181|COMPLETE|task_007|LOW|cpu=0,mem=0,gpu=0,network=0|duration=89s
+1190|RELEASE|task_011|MEDIUM|cpu=4,mem=8192,gpu=1,network=1000|task completed successfully
+1191|COMPLETE|task_011|MEDIUM|cpu=0,mem=0,gpu=0,network=0|duration=69s
+1200|RELEASE|task_012|LOW|cpu=2,mem=4096,gpu=0,network=500|task completed successfully
+1201|COMPLETE|task_012|LOW|cpu=0,mem=0,gpu=0,network=0|duration=69s
