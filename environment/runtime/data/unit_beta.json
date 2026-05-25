@@ -1,0 +1,48 @@
+{
+  "unit_id": "beta",
+  "blocks": [
+    {
+      "block_id": "bb0",
+      "instructions": [
+        {"opcode": "fload", "dest": "v20", "operands": ["faddr_0x200"], "register_class": "fpr", "position": 0},
+        {"opcode": "fload", "dest": "v21", "operands": ["faddr_0x208"], "register_class": "fpr", "position": 1},
+        {"opcode": "fadd", "dest": "v22", "operands": ["v20", "v21"], "register_class": "fpr", "position": 2},
+        {"opcode": "fmul", "dest": "v23", "operands": ["v22", "v20"], "register_class": "fpr", "position": 3}
+      ]
+    },
+    {
+      "block_id": "bb1",
+      "instructions": [
+        {"opcode": "phi", "dest": "v24", "operands": ["v22", "v27"], "register_class": "fpr", "position": 0},
+        {"opcode": "fsub", "dest": "v25", "operands": ["v24", "v21"], "register_class": "fpr", "position": 1},
+        {"opcode": "fcmp", "dest": "v26", "operands": ["v25", "v20"], "register_class": "fpr", "position": 2},
+        {"opcode": "branch", "dest": null, "operands": ["v26", "bb2", "bb3"], "register_class": "fpr", "position": 3}
+      ]
+    },
+    {
+      "block_id": "bb2",
+      "instructions": [
+        {"opcode": "fload", "dest": "v27", "operands": ["faddr_0x210"], "register_class": "fpr", "position": 0},
+        {"opcode": "fadd", "dest": "v28", "operands": ["v27", "v25"], "register_class": "fpr", "position": 1},
+        {"opcode": "fstore", "dest": null, "operands": ["v28", "faddr_0x220"], "register_class": "fpr", "position": 2}
+      ]
+    },
+    {
+      "block_id": "bb3",
+      "instructions": [
+        {"opcode": "fdiv", "dest": "v29", "operands": ["v24", "v21"], "register_class": "fpr", "position": 0},
+        {"opcode": "fstore", "dest": null, "operands": ["v29", "faddr_0x228"], "register_class": "fpr", "position": 1},
+        {"opcode": "jump", "dest": null, "operands": ["bb1"], "register_class": "fpr", "position": 2}
+      ]
+    },
+    {
+      "block_id": "bb4",
+      "instructions": [
+        {"opcode": "fload", "dest": "v30", "operands": ["faddr_0x230"], "register_class": "fpr", "position": 0},
+        {"opcode": "fmul", "dest": "v31", "operands": ["v30", "v28"], "register_class": "fpr", "position": 1},
+        {"opcode": "fadd", "dest": "v32", "operands": ["v31", "v22"], "register_class": "fpr", "position": 2},
+        {"opcode": "fstore", "dest": null, "operands": ["v32", "faddr_0x238"], "register_class": "fpr", "position": 3}
+      ]
+    }
+  ]
+}

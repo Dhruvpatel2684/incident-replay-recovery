@@ -1,0 +1,49 @@
+{
+  "unit_id": "gamma",
+  "blocks": [
+    {
+      "block_id": "bb0",
+      "instructions": [
+        {"opcode": "vload", "dest": "v40", "operands": ["vaddr_0x300"], "register_class": "vec", "position": 0},
+        {"opcode": "vload", "dest": "v41", "operands": ["vaddr_0x310"], "register_class": "vec", "position": 1},
+        {"opcode": "vadd", "dest": "v42", "operands": ["v40", "v41"], "register_class": "vec", "position": 2},
+        {"opcode": "vmul", "dest": "v43", "operands": ["v42", "v40"], "register_class": "vec", "position": 3}
+      ]
+    },
+    {
+      "block_id": "bb1",
+      "instructions": [
+        {"opcode": "phi", "dest": "v44", "operands": ["v42", "v48"], "register_class": "vec", "position": 0},
+        {"opcode": "vsub", "dest": "v45", "operands": ["v44", "v41"], "register_class": "vec", "position": 1},
+        {"opcode": "simd_shuffle", "dest": "v46", "operands": ["v45", "v40"], "register_class": "simd", "position": 2},
+        {"opcode": "simd_blend", "dest": "v47", "operands": ["v46", "v44"], "register_class": "simd", "position": 3}
+      ]
+    },
+    {
+      "block_id": "bb2",
+      "instructions": [
+        {"opcode": "vload", "dest": "v48", "operands": ["vaddr_0x320"], "register_class": "vec", "position": 0},
+        {"opcode": "simd_permute", "dest": "v49", "operands": ["v48", "v47"], "register_class": "simd", "position": 1},
+        {"opcode": "simd_reduce", "dest": "v50", "operands": ["v49"], "register_class": "simd", "position": 2},
+        {"opcode": "vstore", "dest": null, "operands": ["v50", "vaddr_0x330"], "register_class": "simd", "position": 3}
+      ]
+    },
+    {
+      "block_id": "bb3",
+      "instructions": [
+        {"opcode": "vadd", "dest": "v51", "operands": ["v44", "v43"], "register_class": "vec", "position": 0},
+        {"opcode": "simd_dot", "dest": "v52", "operands": ["v51", "v45"], "register_class": "simd", "position": 1},
+        {"opcode": "vstore", "dest": null, "operands": ["v52", "vaddr_0x340"], "register_class": "simd", "position": 2}
+      ]
+    },
+    {
+      "block_id": "bb4",
+      "instructions": [
+        {"opcode": "vload", "dest": "v53", "operands": ["vaddr_0x350"], "register_class": "vec", "position": 0},
+        {"opcode": "vmul", "dest": "v54", "operands": ["v53", "v42"], "register_class": "vec", "position": 1},
+        {"opcode": "simd_fma", "dest": "v55", "operands": ["v54", "v53", "v41"], "register_class": "simd", "position": 2},
+        {"opcode": "vstore", "dest": null, "operands": ["v55", "vaddr_0x360"], "register_class": "simd", "position": 3}
+      ]
+    }
+  ]
+}

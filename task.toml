@@ -1,0 +1,37 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "compilers"
+difficulty = "hard"
+tags = ["ssa", "register-allocation", "compiler-backend", "instruction-scheduling", "live-range-analysis"]
+
+difficulty_explanation = "Requires understanding SSA form, register allocation algorithms, live-range pressure analysis, and how configuration parsing bugs cascade through a multi-stage compiler backend. Four interacting defects span configuration, scheduling, and pressure computation modules."
+solution_explanation = "Fix register class parsing (strip whitespace from comma-split), correct config section for spill threshold (allocator.constraints vs allocator), fix pressure accumulation (replace += with = for last-write-wins), and add unit_id as sort tiebreaker in scheduler."
+verification_explanation = "Tests validate output file structure, register allocation correctness for all classes including SIMD, pressure values, schedule determinism, spill threshold behavior, and phi-node resolution completeness."
+expert_time_estimate_hours = 3.0
+
+[task]
+name = "ssa-regalloc-repair"
+description = "Debug a compiler backend register allocation system that processes SSA-form IR from multiple compilation units. The system has defects in configuration parsing, pressure analysis, and instruction scheduling that produce incorrect register assignments."
+
+[task.difficulty]
+level = "hard"
+reasoning = "Multiple interacting bugs across configuration parsing, data accumulation, and sort ordering require understanding compiler IR concepts and tracing data flow through the full allocation process."
+
+[task.runtime]
+entrypoint = "python3 -m runtime.run_allocator"
+language = "python"
+dependencies = "stdlib-only"
+
+[task.validator]
+command = "bash tests/test.sh"
+description = "Runs the allocator, then executes pytest to verify output correctness across allocation, scheduling, and pressure metrics."
+
+[task.repair]
+command = "bash solution/solve.sh"
+description = "Patches configuration parsing, section references, pressure computation, and sort keys, then re-runs the allocator."
+
+[task.resources]
+timeout = 300
+cpu = 2
+memory = "2GB"
+disk = "1GB"

@@ -1,0 +1,39 @@
+{
+  "unit_id": "alpha",
+  "blocks": [
+    {
+      "block_id": "bb0",
+      "instructions": [
+        {"opcode": "load", "dest": "v1", "operands": ["addr_0x100"], "register_class": "gpr", "position": 0},
+        {"opcode": "load", "dest": "v2", "operands": ["addr_0x108"], "register_class": "gpr", "position": 1},
+        {"opcode": "add", "dest": "v3", "operands": ["v1", "v2"], "register_class": "gpr", "position": 2},
+        {"opcode": "store", "dest": null, "operands": ["v3", "addr_0x110"], "register_class": "gpr", "position": 3}
+      ]
+    },
+    {
+      "block_id": "bb1",
+      "instructions": [
+        {"opcode": "phi", "dest": "v4", "operands": ["v3", "v10"], "register_class": "gpr", "position": 0},
+        {"opcode": "mul", "dest": "v5", "operands": ["v4", "v1"], "register_class": "gpr", "position": 1},
+        {"opcode": "cmp", "dest": "v6", "operands": ["v5", "v2"], "register_class": "gpr", "position": 2},
+        {"opcode": "branch", "dest": null, "operands": ["v6", "bb2", "bb3"], "register_class": "gpr", "position": 3}
+      ]
+    },
+    {
+      "block_id": "bb2",
+      "instructions": [
+        {"opcode": "load", "dest": "v7", "operands": ["addr_0x120"], "register_class": "gpr", "position": 0},
+        {"opcode": "add", "dest": "v8", "operands": ["v7", "v5"], "register_class": "gpr", "position": 1},
+        {"opcode": "shl", "dest": "v9", "operands": ["v8", "2"], "register_class": "gpr", "position": 2},
+        {"opcode": "store", "dest": null, "operands": ["v9", "addr_0x130"], "register_class": "gpr", "position": 3}
+      ]
+    },
+    {
+      "block_id": "bb3",
+      "instructions": [
+        {"opcode": "sub", "dest": "v10", "operands": ["v5", "v1"], "register_class": "gpr", "position": 0},
+        {"opcode": "jump", "dest": null, "operands": ["bb1"], "register_class": "gpr", "position": 1}
+      ]
+    }
+  ]
+}
