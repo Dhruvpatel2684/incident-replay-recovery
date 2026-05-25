@@ -52,6 +52,54 @@ The `mix_session.json` defines 6 channels with:
 
 Both output files are written to `/app/runtime/` alongside the input files.
 
+#### `mix_output.json` schema
+
+```json
+{
+  "stereo_samples": {
+    "left": [int, ...],
+    "right": [int, ...]
+  },
+  "channel_rms_db": {
+    "kick": float,
+    "snare": float,
+    "hihat": float,
+    "bass": float,
+    "synth": float,
+    "vocal": float
+  },
+  "peak_sample": int,
+  "total_samples": int
+}
+```
+
+- `stereo_samples.left` / `stereo_samples.right`: Arrays of 16-bit signed integers (the mixed stereo output, 200 samples each)
+- `channel_rms_db`: Per-channel RMS level in dBFS (negative float, typically -10 to -60)
+- `peak_sample`: Maximum absolute sample value across both L and R channels
+- `total_samples`: Number of output samples per channel (200)
+
+#### `mix_stats.json` schema
+
+```json
+{
+  "output_rms_db_left": float,
+  "output_rms_db_right": float,
+  "channels_mixed": int,
+  "crossfade_applied": bool,
+  "clipped_samples": int,
+  "integrity_checksum": str,
+  "dynamic_range_db": float
+}
+```
+
+- `output_rms_db_left`: RMS level of the left output channel in dBFS
+- `output_rms_db_right`: RMS level of the right output channel in dBFS
+- `channels_mixed`: Number of input channels mixed (6)
+- `crossfade_applied`: Whether crossfade was applied between synth/vocal
+- `clipped_samples`: Number of output samples that hit the ±32767 clipping limit
+- `integrity_checksum`: 16-character hex SHA-256 prefix over output sample data (L then R)
+- `dynamic_range_db`: Difference between peak level and RMS level in dB
+
 ## Constraints
 - Python 3 standard library only (math, json, hashlib, struct)
 - 16-bit signed audio: valid sample range is [-32768, 32767]

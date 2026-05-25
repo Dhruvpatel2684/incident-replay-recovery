@@ -4,6 +4,6 @@ WORKDIR /app
 
 COPY runtime/ ./runtime/
 
-RUN pip install --no-cache-dir pytest
+RUN pip install --no-cache-dir uv
 
 CMD ["python", "runtime/mixer.py"]
