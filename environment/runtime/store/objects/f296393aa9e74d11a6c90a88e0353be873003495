@@ -1,0 +1,6 @@
+tree bbb90aad3ebe2cd250a5c2be1204013f0cf23b1f
+parent 97e4b56af3db7d535fc65874a176017bbaec3130
+author Dev User <dev@example.com> 1700300000 +0000
+committer Dev User <dev@example.com> 1700300000 +0000
+
+Add configuration validation

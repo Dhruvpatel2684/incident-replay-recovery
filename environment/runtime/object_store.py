@@ -48,6 +48,7 @@ def write_ref(ref_name, commit_hash):
     """Write a reference (branch pointer) to a commit hash."""
     ensure_dirs()
     path = os.path.join(REFS_DIR, ref_name)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
         f.write(commit_hash)
 
@@ -74,13 +75,3 @@ def read_index():
         return {}
     with open(INDEX_FILE, "r") as f:
         return json.load(f)
-
-
-def get_object_type(content):
-    """Determine object type from its stored content format."""
-    if content.startswith("tree "):
-        return "tree"
-    elif content.startswith("commit "):
-        return "commit"
-    else:
-        return "blob"

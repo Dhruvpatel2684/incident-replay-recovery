@@ -1,0 +1,9 @@
+{
+    "app_name": "data-processor",
+    "version": "1.0.0",
+    "debug": true,
+    "max_retries": 3,
+    "timeout_seconds": 30,
+    "log_level": "DEBUG",
+    "output_format": "text"
+}

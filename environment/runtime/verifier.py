@@ -9,6 +9,21 @@ from object_store import (
 )
 
 
+def classify_object(content):
+    """Classify an object's type based on content format."""
+    if content is None:
+        return "unknown"
+    lines = content.strip().split("\n")
+    if lines and all(
+        (l.startswith("100644 ") or l.startswith("040000 "))
+        for l in lines if l.strip()
+    ):
+        return "tree"
+    if content.startswith("tree ") and "\nauthor " in content:
+        return "commit"
+    return "blob"
+
+
 def verify_object_hashes():
     """Verify that each object file's name matches SHA1 of its content."""
     errors = []
@@ -17,36 +32,16 @@ def verify_object_hashes():
         if content is None:
             errors.append(f"Cannot read object {obj_hash}")
             continue
-        # Determine type and verify hash
-        if content.startswith("100644 ") or content.startswith("040000 "):
-            # Tree object
+        obj_type = classify_object(content)
+        if obj_type == "tree":
             expected = compute_tree_hash(content)
-        elif content.startswith("tree "):
-            # Commit object (starts with "tree <hash>")
+        elif obj_type == "commit":
             expected = compute_commit_hash(content)
         else:
-            # Blob object
             expected = compute_blob_hash(content)
         if expected != obj_hash:
             errors.append(f"Object {obj_hash}: expected hash {expected}")
     return errors
-
-
-def classify_object(content):
-    """Classify an object's type based on content format."""
-    if content is None:
-        return "unknown"
-    lines = content.strip().split("\n")
-    # Tree: lines are "<mode> <hash> <name>"
-    if lines and all(
-        (l.startswith("100644 ") or l.startswith("040000 "))
-        for l in lines if l.strip()
-    ):
-        return "tree"
-    # Commit: starts with "tree <hash>"
-    if content.startswith("tree ") and "\nauthor " in content:
-        return "commit"
-    return "blob"
 
 
 def verify_tree_references():
@@ -74,35 +69,75 @@ def verify_commit_references():
         content = read_object(obj_hash)
         if classify_object(content) != "commit":
             continue
-        for line in content.strip().split("\n"):
+        lines = content.split("\n")
+        for line in lines:
             if line.startswith("tree "):
                 tree_hash = line.split(" ", 1)[1]
                 if not object_exists(tree_hash):
                     errors.append(f"Commit {obj_hash}: tree {tree_hash} not found")
+                else:
+                    tree_content = read_object(tree_hash)
+                    if classify_object(tree_content) != "tree":
+                        errors.append(f"Commit {obj_hash}: tree {tree_hash} is not a tree object")
             elif line.startswith("parent "):
                 parent_hash = line.split(" ", 1)[1]
                 if not object_exists(parent_hash):
                     errors.append(f"Commit {obj_hash}: parent {parent_hash} not found")
+                else:
+                    parent_content = read_object(parent_hash)
+                    if classify_object(parent_content) != "commit":
+                        errors.append(f"Commit {obj_hash}: parent {parent_hash} is not a commit")
+            elif line == "":
+                break
     return errors
 
 
 def verify_refs():
     """Verify that all refs point to existing commit objects."""
     errors = []
-    if not os.path.exists(REFS_DIR):
-        errors.append("refs directory missing")
-        return errors
-    for ref_name in os.listdir(REFS_DIR):
-        commit_hash = read_ref(ref_name)
-        if not commit_hash:
-            errors.append(f"Ref {ref_name}: empty")
-            continue
-        if not object_exists(commit_hash):
-            errors.append(f"Ref {ref_name}: points to non-existent {commit_hash}")
+    heads_dir = os.path.join(REFS_DIR, "heads")
+    
+    # Check HEAD
+    head_path = os.path.join(REFS_DIR, "HEAD")
+    if os.path.exists(head_path):
+        with open(head_path) as f:
+            head_content = f.read().strip()
+        if head_content.startswith("ref: "):
+            # Symbolic ref - resolve it
+            ref_path = head_content[5:]  # e.g. "refs/heads/main"
+            # Convert to filesystem path
+            target_path = os.path.join(REFS_DIR, ref_path.replace("refs/", ""))
+            if not os.path.exists(target_path):
+                errors.append(f"HEAD symref target {ref_path} does not exist")
+            else:
+                with open(target_path) as f:
+                    commit_hash = f.read().strip()
+                if not object_exists(commit_hash):
+                    errors.append(f"HEAD (via {ref_path}): points to non-existent {commit_hash}")
+                else:
+                    content = read_object(commit_hash)
+                    if classify_object(content) != "commit":
+                        errors.append(f"HEAD (via {ref_path}): {commit_hash} is not a commit")
         else:
-            content = read_object(commit_hash)
-            if classify_object(content) != "commit":
-                errors.append(f"Ref {ref_name}: {commit_hash} is not a commit")
+            # Direct ref
+            if not object_exists(head_content):
+                errors.append(f"HEAD: points to non-existent {head_content}")
+    else:
+        errors.append("HEAD file missing")
+    
+    # Check branch refs
+    if os.path.exists(heads_dir):
+        for ref_name in os.listdir(heads_dir):
+            ref_path = os.path.join(heads_dir, ref_name)
+            with open(ref_path) as f:
+                commit_hash = f.read().strip()
+            if not object_exists(commit_hash):
+                errors.append(f"refs/heads/{ref_name}: points to non-existent {commit_hash}")
+            else:
+                content = read_object(commit_hash)
+                if classify_object(content) != "commit":
+                    errors.append(f"refs/heads/{ref_name}: {commit_hash} is not a commit")
+    
     return errors
 
 

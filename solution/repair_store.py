@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Repair script for the corrupted git-style object store.
 
-This script restores full integrity by:
-1. Reading source files to recompute correct blob hashes
-2. Identifying the historical blob (old main.py from commit 1)
-3. Rebuilding tree objects with correct references
-4. Rebuilding commit objects with correct tree/parent hashes
-5. Fixing HEAD reference and index
+Strategy:
+1. Read current source files to compute correct blob hashes
+2. Extract commit metadata (messages, timestamps, author) from corrupted commits
+3. Identify historical blobs by finding blob objects whose content doesn't
+   match any current source file
+4. Rebuild all trees based on known file-to-commit mapping
+5. Rebuild commits with correct tree hashes but preserved metadata
+6. Fix branch refs and index
 """
 
 import hashlib
@@ -23,46 +25,38 @@ INDEX_FILE = os.path.join(STORE_DIR, "index.json")
 
 
 def compute_blob_hash(content):
-    """Compute git-style blob hash: SHA1('blob <len>\\0<content>')"""
     header = f"blob {len(content)}\0"
     return hashlib.sha1((header + content).encode()).hexdigest()
 
 
 def compute_tree_hash(tree_content):
-    """Compute git-style tree hash: SHA1('tree <len>\\0<content>')"""
     header = f"tree {len(tree_content)}\0"
     return hashlib.sha1((header + tree_content).encode()).hexdigest()
 
 
 def compute_commit_hash(commit_content):
-    """Compute git-style commit hash: SHA1('commit <len>\\0<content>')"""
     header = f"commit {len(commit_content)}\0"
     return hashlib.sha1((header + commit_content).encode()).hexdigest()
 
 
 def build_tree_content(entries):
-    """Build tree content from sorted entries [(mode, hash, name), ...]"""
     sorted_entries = sorted(entries, key=lambda e: e[2])
-    lines = []
-    for mode, obj_hash, name in sorted_entries:
-        lines.append(f"{mode} {obj_hash} {name}")
+    lines = [f"{mode} {h} {name}" for mode, h, name in sorted_entries]
     return "\n".join(lines) + "\n"
 
 
-def build_commit_content(tree_hash, parent_hash, message):
-    """Build commit content string."""
+def build_commit_content(tree_hash, parent_hashes, message, author_line, committer_line):
     lines = [f"tree {tree_hash}"]
-    if parent_hash:
-        lines.append(f"parent {parent_hash}")
-    lines.append("author Dev User <dev@example.com> 1700000000 +0000")
-    lines.append("committer Dev User <dev@example.com> 1700000000 +0000")
+    for p in parent_hashes:
+        lines.append(f"parent {p}")
+    lines.append(f"author {author_line}")
+    lines.append(f"committer {committer_line}")
     lines.append("")
     lines.append(message)
     return "\n".join(lines) + "\n"
 
 
 def classify_object(content):
-    """Classify object type from content."""
     if content is None:
         return "unknown"
     lines = content.strip().split("\n")
@@ -76,31 +70,39 @@ def classify_object(content):
     return "blob"
 
 
-def find_old_main_py():
-    """Find the historical main.py blob in the store.
-    
-    The old main.py is identifiable because it's a Python file that:
-    - Contains 'Main application entry point' (it's a version of main.py)
-    - Does NOT import from lib.helper (that was added in commit 2)
-    """
-    for obj_name in os.listdir(OBJECTS_DIR):
-        obj_path = os.path.join(OBJECTS_DIR, obj_name)
-        with open(obj_path) as f:
-            content = f.read()
-        if classify_object(content) != "blob":
-            continue
-        if "Main application entry point" in content and "from lib.helper" not in content:
-            return content
-    return None
+def parse_commit(content):
+    """Parse commit content into metadata."""
+    header, message = content.split("\n\n", 1)
+    lines = header.split("\n")
+    tree = None
+    parents = []
+    author = None
+    committer = None
+    for line in lines:
+        if line.startswith("tree "):
+            tree = line[5:]
+        elif line.startswith("parent "):
+            parents.append(line[7:])
+        elif line.startswith("author "):
+            author = line[7:]
+        elif line.startswith("committer "):
+            committer = line[10:]
+    return {
+        "tree": tree,
+        "parents": parents,
+        "author": author,
+        "committer": committer,
+        "message": message.strip(),
+    }
 
 
 def main():
     os.makedirs(OBJECTS_DIR, exist_ok=True)
-    os.makedirs(REFS_DIR, exist_ok=True)
+    os.makedirs(os.path.join(REFS_DIR, "heads"), exist_ok=True)
 
-    # Step 1: Read all source files and compute correct blob hashes
+    # Step 1: Read current source files
     source_files = {}
-    for fname in ["main.py", "utils.py", "config.json", "README.md"]:
+    for fname in ["main.py", "utils.py", "config.json", "README.md", "processor.py"]:
         path = os.path.join(SOURCE_DIR, fname)
         with open(path) as f:
             source_files[fname] = f.read()
@@ -109,86 +111,327 @@ def main():
         with open(path) as f:
             source_files[f"lib/{fname}"] = f.read()
 
-    blob_hashes = {}
-    for path, content in source_files.items():
-        blob_hashes[path] = compute_blob_hash(content)
+    # Step 2: Extract commit metadata from corrupted store
+    existing_commits = []
+    existing_blobs = {}
+    for obj_name in os.listdir(OBJECTS_DIR):
+        obj_path = os.path.join(OBJECTS_DIR, obj_name)
+        with open(obj_path) as f:
+            content = f.read()
+        obj_type = classify_object(content)
+        if obj_type == "commit":
+            existing_commits.append(parse_commit(content))
+        elif obj_type == "blob":
+            existing_blobs[obj_name] = content
 
-    # Step 2: Find the old main.py blob (from commit 1) before clearing
-    old_main_content = find_old_main_py()
+    # Sort commits by timestamp to establish ordering
+    existing_commits.sort(key=lambda c: c["author"].split()[-2])
 
-    # Step 3: Clear all objects
+    # Step 3: Identify historical blob versions
+    current_contents = set(source_files.values())
+    historical_blobs = {}
+    for obj_name, content in existing_blobs.items():
+        if content not in current_contents:
+            correct_hash = compute_blob_hash(content)
+            historical_blobs[correct_hash] = content
+
+    # Step 4: Identify which historical blobs belong to which files
+    # Historical blobs are older versions of current files
+    # We identify them by structural similarity
+    
+    # Find old main.py versions (has "Main application entry point" but different content)
+    old_mains = {}
+    old_utils = {}
+    old_configs = {}
+    old_readmes = {}
+    old_processors = {}
+    old_helpers = {}
+    old_constants = {}
+    cache_blobs = {}
+    
+    for h, content in historical_blobs.items():
+        if "Main application entry point" in content:
+            old_mains[h] = content
+        elif "Utility functions for data processing" in content:
+            old_utils[h] = content
+        elif '"app_name"' in content and '"data-processor"' in content:
+            old_configs[h] = content
+        elif "# Data Processor" in content:
+            old_readmes[h] = content
+        elif "Batch data transformation module" in content:
+            old_processors[h] = content
+        elif "Helper module for data transformation" in content:
+            old_helpers[h] = content
+        elif "Application constants" in content:
+            old_constants[h] = content
+        elif "caching layer" in content.lower() or "CACHE_DIR" in content:
+            cache_blobs[h] = content
+
+    # Step 5: Clear all objects
     for f_name in os.listdir(OBJECTS_DIR):
         os.remove(os.path.join(OBJECTS_DIR, f_name))
 
-    # Step 4: Write all current blobs with correct hashes
+    # Step 6: Compute current blob hashes and write them
+    blob_hashes = {}
     for path, content in source_files.items():
-        correct_hash = blob_hashes[path]
-        with open(os.path.join(OBJECTS_DIR, correct_hash), "w") as f:
+        h = compute_blob_hash(content)
+        blob_hashes[path] = h
+        with open(os.path.join(OBJECTS_DIR, h), "w") as f:
             f.write(content)
 
-    # Step 5: Write old main.py blob (if found)
-    old_main_hash = None
-    if old_main_content:
-        old_main_hash = compute_blob_hash(old_main_content)
-        with open(os.path.join(OBJECTS_DIR, old_main_hash), "w") as f:
-            f.write(old_main_content)
+    # Write historical blobs
+    for h, content in historical_blobs.items():
+        with open(os.path.join(OBJECTS_DIR, h), "w") as f:
+            f.write(content)
 
-    # Step 6: Build lib/ subtree
-    lib_entries = [
-        ("100644", blob_hashes["lib/constants.py"], "constants.py"),
-        ("100644", blob_hashes["lib/helper.py"], "helper.py"),
-    ]
-    lib_tree_content = build_tree_content(lib_entries)
-    lib_tree_hash = compute_tree_hash(lib_tree_content)
-    with open(os.path.join(OBJECTS_DIR, lib_tree_hash), "w") as f:
-        f.write(lib_tree_content)
+    # Step 7: Reconstruct commit history
+    # We know the commit messages from parsing. Map them to file states.
+    # Message ordering (by timestamp):
+    # 1. "Initial project setup" - all files v1
+    # 2. "Add data processing module" - adds processor, updates main
+    # 3. "Implement caching layer" (feature, timestamp between 2 and 3 on main)
+    # 3. "Refactor utilities" - updates utils  
+    # 4. "Add configuration validation" - updates config, other files
 
-    # Step 7: Build current root tree
-    root_entries = [
-        ("100644", blob_hashes["README.md"], "README.md"),
-        ("100644", blob_hashes["config.json"], "config.json"),
-        ("040000", lib_tree_hash, "lib"),
-        ("100644", blob_hashes["main.py"], "main.py"),
-        ("100644", blob_hashes["utils.py"], "utils.py"),
-    ]
-    root_tree_content = build_tree_content(root_entries)
-    root_tree_hash = compute_tree_hash(root_tree_content)
-    with open(os.path.join(OBJECTS_DIR, root_tree_hash), "w") as f:
-        f.write(root_tree_content)
+    # Determine blob assignments per commit:
+    # Commit 1 (Initial): old main (no processor import), old utils, old config, old readme, old helper, old constants
+    # Need: the simplest/oldest version of each file
+    
+    # For main.py: v1 doesn't import processor or lib.helper
+    v1_main_hash = None
+    for h, content in old_mains.items():
+        if "from processor" not in content and "from lib.helper" not in content:
+            v1_main_hash = h
+            break
+    
+    # v2+ main imports processor
+    v2_main_hash = blob_hashes["main.py"]  # Current main is the v2+ version
+    
+    # For utils: v1 doesn't have json import or load_config
+    v1_utils_hash = None
+    for h, content in old_utils.items():
+        if "import json" not in content:
+            v1_utils_hash = h
+            break
+    v3_utils_hash = blob_hashes["utils.py"]  # Current utils
+    
+    # For config: v1 has version "1.0.0"
+    v1_config_hash = None
+    for h, content in old_configs.items():
+        if '"1.0.0"' in content:
+            v1_config_hash = h
+            break
+    v4_config_hash = blob_hashes["config.json"]  # Current config
+    
+    # For README: v1 is shorter (no "Modules" section)
+    v1_readme_hash = None
+    for h, content in old_readmes.items():
+        if "## Modules" not in content:
+            v1_readme_hash = h
+            break
+    v4_readme_hash = blob_hashes["README.md"]  # Current readme
+    
+    # For processor: v2 is simpler (no BATCH_SIZE)
+    v2_processor_hash = None
+    for h, content in old_processors.items():
+        if "BATCH_SIZE" not in content:
+            v2_processor_hash = h
+            break
+    v4_processor_hash = blob_hashes["processor.py"]  # Current processor
+    
+    # For helper: v1 uses .upper().strip()
+    v1_helper_hash = None
+    for h, content in old_helpers.items():
+        if ".upper().strip()" in content:
+            v1_helper_hash = h
+            break
+    v4_helper_hash = blob_hashes["lib/helper.py"]  # Current helper
+    
+    # For constants: v1 has no BATCH_SIZE
+    v1_constants_hash = None
+    v2_constants_hash = None
+    for h, content in old_constants.items():
+        if "BATCH_SIZE" not in content:
+            v1_constants_hash = h
+        elif "BATCH_SIZE" in content and 'v1.0.0' in content:
+            v2_constants_hash = h
+    v4_constants_hash = blob_hashes["lib/constants.py"]  # Current constants
+    
+    # Cache blob
+    cache_hash = None
+    for h in cache_blobs:
+        cache_hash = h
+        break
 
-    # Step 8: Build old root tree (for commit 1, using old main.py)
-    if old_main_hash:
-        old_root_entries = [
-            ("100644", blob_hashes["README.md"], "README.md"),
-            ("100644", blob_hashes["config.json"], "config.json"),
-            ("040000", lib_tree_hash, "lib"),
-            ("100644", old_main_hash, "main.py"),
-            ("100644", blob_hashes["utils.py"], "utils.py"),
-        ]
-        old_root_tree_content = build_tree_content(old_root_entries)
-        old_root_tree_hash = compute_tree_hash(old_root_tree_content)
-        with open(os.path.join(OBJECTS_DIR, old_root_tree_hash), "w") as f:
-            f.write(old_root_tree_content)
-    else:
-        old_root_tree_hash = root_tree_hash
+    # Step 8: Build trees for each commit state
 
-    # Step 9: Build commit 1 (initial, no parent)
-    commit1_content = build_commit_content(old_root_tree_hash, None, "Initial commit")
-    commit1_hash = compute_commit_hash(commit1_content)
-    with open(os.path.join(OBJECTS_DIR, commit1_hash), "w") as f:
-        f.write(commit1_content)
+    # Commit 1 tree
+    lib_tree_v1 = build_tree_content([
+        ("100644", v1_constants_hash, "constants.py"),
+        ("100644", v1_helper_hash, "helper.py"),
+    ])
+    h_lib_v1 = compute_tree_hash(lib_tree_v1)
+    with open(os.path.join(OBJECTS_DIR, h_lib_v1), "w") as f:
+        f.write(lib_tree_v1)
 
-    # Step 10: Build commit 2 (latest, parent = commit 1)
-    commit2_content = build_commit_content(root_tree_hash, commit1_hash, "Update main.py with data processing")
-    commit2_hash = compute_commit_hash(commit2_content)
-    with open(os.path.join(OBJECTS_DIR, commit2_hash), "w") as f:
-        f.write(commit2_content)
+    root_tree_v1 = build_tree_content([
+        ("100644", v1_readme_hash, "README.md"),
+        ("100644", v1_config_hash, "config.json"),
+        ("040000", h_lib_v1, "lib"),
+        ("100644", v1_main_hash, "main.py"),
+        ("100644", v1_utils_hash, "utils.py"),
+    ])
+    h_root_v1 = compute_tree_hash(root_tree_v1)
+    with open(os.path.join(OBJECTS_DIR, h_root_v1), "w") as f:
+        f.write(root_tree_v1)
 
-    # Step 11: Fix refs/HEAD
+    # Commit 2 tree (adds processor, updates main, constants gets BATCH_SIZE)
+    lib_tree_v2 = build_tree_content([
+        ("100644", v2_constants_hash, "constants.py"),
+        ("100644", v1_helper_hash, "helper.py"),
+    ])
+    h_lib_v2 = compute_tree_hash(lib_tree_v2)
+    with open(os.path.join(OBJECTS_DIR, h_lib_v2), "w") as f:
+        f.write(lib_tree_v2)
+
+    root_tree_v2 = build_tree_content([
+        ("100644", v1_readme_hash, "README.md"),
+        ("100644", v1_config_hash, "config.json"),
+        ("040000", h_lib_v2, "lib"),
+        ("100644", v2_main_hash, "main.py"),
+        ("100644", v2_processor_hash, "processor.py"),
+        ("100644", v1_utils_hash, "utils.py"),
+    ])
+    h_root_v2 = compute_tree_hash(root_tree_v2)
+    with open(os.path.join(OBJECTS_DIR, h_root_v2), "w") as f:
+        f.write(root_tree_v2)
+
+    # Commit 3 tree (utils updated)
+    root_tree_v3 = build_tree_content([
+        ("100644", v1_readme_hash, "README.md"),
+        ("100644", v1_config_hash, "config.json"),
+        ("040000", h_lib_v2, "lib"),
+        ("100644", v2_main_hash, "main.py"),
+        ("100644", v2_processor_hash, "processor.py"),
+        ("100644", v3_utils_hash, "utils.py"),
+    ])
+    h_root_v3 = compute_tree_hash(root_tree_v3)
+    with open(os.path.join(OBJECTS_DIR, h_root_v3), "w") as f:
+        f.write(root_tree_v3)
+
+    # Commit 4 tree (config, readme, processor, helper, constants updated)
+    lib_tree_v4 = build_tree_content([
+        ("100644", v4_constants_hash, "constants.py"),
+        ("100644", v4_helper_hash, "helper.py"),
+    ])
+    h_lib_v4 = compute_tree_hash(lib_tree_v4)
+    with open(os.path.join(OBJECTS_DIR, h_lib_v4), "w") as f:
+        f.write(lib_tree_v4)
+
+    root_tree_v4 = build_tree_content([
+        ("100644", v4_readme_hash, "README.md"),
+        ("100644", v4_config_hash, "config.json"),
+        ("040000", h_lib_v4, "lib"),
+        ("100644", v2_main_hash, "main.py"),
+        ("100644", v4_processor_hash, "processor.py"),
+        ("100644", v3_utils_hash, "utils.py"),
+    ])
+    h_root_v4 = compute_tree_hash(root_tree_v4)
+    with open(os.path.join(OBJECTS_DIR, h_root_v4), "w") as f:
+        f.write(root_tree_v4)
+
+    # Commit 5 tree (feature: adds cache.py, based on commit 2 state)
+    root_tree_v5 = build_tree_content([
+        ("100644", v1_readme_hash, "README.md"),
+        ("100644", cache_hash, "cache.py"),
+        ("100644", v1_config_hash, "config.json"),
+        ("040000", h_lib_v2, "lib"),
+        ("100644", v2_main_hash, "main.py"),
+        ("100644", v2_processor_hash, "processor.py"),
+        ("100644", v1_utils_hash, "utils.py"),
+    ])
+    h_root_v5 = compute_tree_hash(root_tree_v5)
+    with open(os.path.join(OBJECTS_DIR, h_root_v5), "w") as f:
+        f.write(root_tree_v5)
+
+    # Step 9: Build commits with correct trees but preserved metadata
+    # Use the metadata extracted from corrupted commits
+    author_line = existing_commits[0]["author"] if existing_commits else "Dev User <dev@example.com> 1700000000 +0000"
+    
+    # Find commit metadata by message
+    commit_meta = {}
+    for cm in existing_commits:
+        commit_meta[cm["message"]] = cm
+
+    def get_author(msg):
+        if msg in commit_meta:
+            return commit_meta[msg]["author"]
+        return "Dev User <dev@example.com> 1700000000 +0000"
+    
+    def get_committer(msg):
+        if msg in commit_meta:
+            return commit_meta[msg]["committer"]
+        return "Dev User <dev@example.com> 1700000000 +0000"
+
+    # Commit 1
+    c1_content = build_commit_content(
+        h_root_v1, [], "Initial project setup",
+        get_author("Initial project setup"),
+        get_committer("Initial project setup")
+    )
+    h_c1 = compute_commit_hash(c1_content)
+    with open(os.path.join(OBJECTS_DIR, h_c1), "w") as f:
+        f.write(c1_content)
+
+    # Commit 2
+    c2_content = build_commit_content(
+        h_root_v2, [h_c1], "Add data processing module",
+        get_author("Add data processing module"),
+        get_committer("Add data processing module")
+    )
+    h_c2 = compute_commit_hash(c2_content)
+    with open(os.path.join(OBJECTS_DIR, h_c2), "w") as f:
+        f.write(c2_content)
+
+    # Commit 3
+    c3_content = build_commit_content(
+        h_root_v3, [h_c2], "Refactor utilities",
+        get_author("Refactor utilities"),
+        get_committer("Refactor utilities")
+    )
+    h_c3 = compute_commit_hash(c3_content)
+    with open(os.path.join(OBJECTS_DIR, h_c3), "w") as f:
+        f.write(c3_content)
+
+    # Commit 4
+    c4_content = build_commit_content(
+        h_root_v4, [h_c3], "Add configuration validation",
+        get_author("Add configuration validation"),
+        get_committer("Add configuration validation")
+    )
+    h_c4 = compute_commit_hash(c4_content)
+    with open(os.path.join(OBJECTS_DIR, h_c4), "w") as f:
+        f.write(c4_content)
+
+    # Commit 5 (feature branch)
+    c5_content = build_commit_content(
+        h_root_v5, [h_c2], "Implement caching layer",
+        get_author("Implement caching layer"),
+        get_committer("Implement caching layer")
+    )
+    h_c5 = compute_commit_hash(c5_content)
+    with open(os.path.join(OBJECTS_DIR, h_c5), "w") as f:
+        f.write(c5_content)
+
+    # Step 10: Fix refs
+    with open(os.path.join(REFS_DIR, "heads", "main"), "w") as f:
+        f.write(h_c4)
+    with open(os.path.join(REFS_DIR, "heads", "feature"), "w") as f:
+        f.write(h_c5)
     with open(os.path.join(REFS_DIR, "HEAD"), "w") as f:
-        f.write(commit2_hash)
+        f.write("ref: refs/heads/main")
 
-    # Step 12: Fix index.json
+    # Step 11: Fix index (reflects main branch = commit 4 state)
     index_data = {}
     for path in sorted(blob_hashes.keys()):
         index_data[path] = blob_hashes[path]
@@ -196,11 +439,9 @@ def main():
         json.dump(index_data, f, indent=2)
 
     print("Store repair complete.")
-    print(f"  Blobs: {len(source_files) + (1 if old_main_hash else 0)}")
-    print(f"  Trees: 2 (lib + root)" + (" + 1 old root" if old_main_hash else ""))
-    print(f"  Commits: 2 (initial + latest)")
-    print(f"  HEAD -> {commit2_hash}")
-    print(f"  Index entries: {len(index_data)}")
+    print(f"  Commits: 5")
+    print(f"  Main branch: {h_c4}")
+    print(f"  Feature branch: {h_c5}")
 
     return 0
 

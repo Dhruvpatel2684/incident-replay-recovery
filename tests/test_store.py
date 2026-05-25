@@ -19,16 +19,19 @@ OUTPUT_DIR = os.path.join(RUNTIME_DIR, "output")
 
 
 def compute_blob_hash(content):
+    """Compute git-style blob hash."""
     header = f"blob {len(content)}\0"
     return hashlib.sha1((header + content).encode()).hexdigest()
 
 
 def compute_tree_hash(tree_content):
+    """Compute git-style tree hash."""
     header = f"tree {len(tree_content)}\0"
     return hashlib.sha1((header + tree_content).encode()).hexdigest()
 
 
 def compute_commit_hash(commit_content):
+    """Compute git-style commit hash."""
     header = f"commit {len(commit_content)}\0"
     return hashlib.sha1((header + commit_content).encode()).hexdigest()
 
@@ -75,14 +78,43 @@ def get_objects_by_type():
     return blobs, trees, commits
 
 
+def get_commit_message(commit_content):
+    """Extract commit message from commit content."""
+    parts = commit_content.split("\n\n", 1)
+    if len(parts) == 2:
+        return parts[1].strip()
+    return ""
+
+
+def get_commit_tree(commit_content):
+    """Extract tree hash from commit content."""
+    for line in commit_content.split("\n"):
+        if line.startswith("tree "):
+            return line.split(" ", 1)[1]
+    return None
+
+
+def get_commit_parents(commit_content):
+    """Extract parent hashes from commit content."""
+    parents = []
+    for line in commit_content.split("\n"):
+        if line.startswith("parent "):
+            parents.append(line.split(" ", 1)[1])
+        elif line == "":
+            break
+    return parents
+
+
 def read_source_files():
-    """Read all source files."""
+    """Read all current source files."""
     sources = {}
-    for fname in ["main.py", "utils.py", "config.json", "README.md"]:
-        with open(os.path.join(SOURCE_DIR, fname)) as f:
+    for fname in ["main.py", "utils.py", "config.json", "README.md", "processor.py"]:
+        path = os.path.join(SOURCE_DIR, fname)
+        with open(path) as f:
             sources[fname] = f.read()
     for fname in ["helper.py", "constants.py"]:
-        with open(os.path.join(SOURCE_DIR, "lib", fname)) as f:
+        path = os.path.join(SOURCE_DIR, "lib", fname)
+        with open(path) as f:
             sources[f"lib/{fname}"] = f.read()
     return sources
 
@@ -91,7 +123,7 @@ class TestBlobIntegrity:
     """Tests for blob object integrity."""
 
     def test_all_blob_hashes_valid(self):
-        """Every file in objects/ with blob content has filename == SHA1(content)."""
+        """Every blob object has filename matching SHA1 of its content."""
         objects = get_all_objects()
         for obj_hash, content in objects.items():
             if classify_object(content) == "blob":
@@ -100,13 +132,8 @@ class TestBlobIntegrity:
                     f"Blob {obj_hash} has wrong hash, expected {expected}"
                 )
 
-    def test_blob_count(self):
-        """There should be exactly the right number of blob objects (7: 6 current + 1 old)."""
-        blobs, _, _ = get_objects_by_type()
-        assert len(blobs) == 7, f"Expected 7 blobs, found {len(blobs)}"
-
     def test_blob_content_matches_source(self):
-        """Current blob content matches source_files/."""
+        """Current source file contents exist as blobs in the store."""
         sources = read_source_files()
         blobs, _, _ = get_objects_by_type()
         blob_contents = set(blobs.values())
@@ -115,65 +142,46 @@ class TestBlobIntegrity:
                 f"Source file {path} content not found in any blob"
             )
 
-    def test_main_py_blob_exists(self):
-        """main.py has a valid blob with correct hash."""
-        with open(os.path.join(SOURCE_DIR, "main.py")) as f:
-            content = f.read()
-        expected_hash = compute_blob_hash(content)
-        assert os.path.exists(os.path.join(OBJECTS_DIR, expected_hash)), (
-            f"main.py blob {expected_hash} not found in objects"
-        )
-
-    def test_readme_blob_exists(self):
-        """README.md has a valid blob with correct hash."""
-        with open(os.path.join(SOURCE_DIR, "README.md")) as f:
-            content = f.read()
-        expected_hash = compute_blob_hash(content)
-        assert os.path.exists(os.path.join(OBJECTS_DIR, expected_hash)), (
-            f"README.md blob {expected_hash} not found in objects"
-        )
+    def test_source_blob_hashes_correct(self):
+        """Each current source file has a blob with the correct hash filename."""
+        sources = read_source_files()
+        for path, content in sources.items():
+            expected_hash = compute_blob_hash(content)
+            assert os.path.exists(os.path.join(OBJECTS_DIR, expected_hash)), (
+                f"Source {path} blob {expected_hash} not found in objects"
+            )
 
 
 class TestTreeIntegrity:
     """Tests for tree object integrity."""
 
-    def test_tree_count(self):
-        """There should be correct number of tree objects (3: lib + root + old root)."""
-        _, trees, _ = get_objects_by_type()
-        assert len(trees) == 3, f"Expected 3 trees, found {len(trees)}"
+    def test_all_tree_hashes_valid(self):
+        """Every tree object has filename matching SHA1 of its content."""
+        objects = get_all_objects()
+        for obj_hash, content in objects.items():
+            if classify_object(content) == "tree":
+                expected = compute_tree_hash(content)
+                assert obj_hash == expected, (
+                    f"Tree {obj_hash} has wrong hash, expected {expected}"
+                )
 
-    def test_root_tree_references_valid(self):
-        """Root tree entries all resolve to existing objects."""
+    def test_tree_references_resolve(self):
+        """All hashes referenced in tree entries exist in the store."""
         _, trees, _ = get_objects_by_type()
         objects = get_all_objects()
-        # Find root tree (has 5 entries including lib dir)
         for tree_hash, content in trees.items():
-            lines = [l for l in content.strip().split("\n") if l.strip()]
-            if len(lines) == 5:  # Root tree has 5 entries
-                for line in lines:
-                    parts = line.split(" ", 2)
-                    ref_hash = parts[1]
-                    assert ref_hash in objects, (
-                        f"Root tree references {ref_hash} which doesn't exist"
-                    )
-
-    def test_lib_tree_references_valid(self):
-        """lib/ subtree entries resolve to existing objects."""
-        _, trees, _ = get_objects_by_type()
-        objects = get_all_objects()
-        # Find lib tree (has 2 entries)
-        for tree_hash, content in trees.items():
-            lines = [l for l in content.strip().split("\n") if l.strip()]
-            if len(lines) == 2 and "constants.py" in content:
-                for line in lines:
-                    parts = line.split(" ", 2)
-                    ref_hash = parts[1]
-                    assert ref_hash in objects, (
-                        f"Lib tree references {ref_hash} which doesn't exist"
-                    )
+            for line in content.strip().split("\n"):
+                if not line.strip():
+                    continue
+                parts = line.split(" ", 2)
+                ref_hash = parts[1]
+                assert ref_hash in objects, (
+                    f"Tree {tree_hash} references non-existent {ref_hash} "
+                    f"(entry: {line})"
+                )
 
     def test_tree_entries_sorted(self):
-        """Tree entries are in sorted order by name."""
+        """Tree entries are sorted alphabetically by name."""
         _, trees, _ = get_objects_by_type()
         for tree_hash, content in trees.items():
             lines = [l for l in content.strip().split("\n") if l.strip()]
@@ -190,68 +198,185 @@ class TestTreeIntegrity:
 class TestCommitIntegrity:
     """Tests for commit object integrity."""
 
-    def test_commit_count(self):
-        """There should be exactly 2 commit objects."""
-        _, _, commits = get_objects_by_type()
-        assert len(commits) == 2, f"Expected 2 commits, found {len(commits)}"
-
-    def test_latest_commit_has_valid_tree(self):
-        """Latest commit's tree hash exists in objects."""
-        _, _, commits = get_objects_by_type()
+    def test_all_commit_hashes_valid(self):
+        """Every commit object has filename matching SHA1 of its content."""
         objects = get_all_objects()
-        # Find commit with parent (that's the latest)
-        for commit_hash, content in commits.items():
-            if "parent " in content.split("\n\n")[0]:
-                tree_line = content.split("\n")[0]
-                tree_hash = tree_line.split(" ")[1]
-                assert tree_hash in objects, (
-                    f"Latest commit tree {tree_hash} not found"
+        for obj_hash, content in objects.items():
+            if classify_object(content) == "commit":
+                expected = compute_commit_hash(content)
+                assert obj_hash == expected, (
+                    f"Commit {obj_hash} has wrong hash, expected {expected}"
                 )
 
-    def test_parent_commit_valid(self):
-        """Latest commit's parent exists in the store."""
+    def test_commit_count(self):
+        """There should be exactly 5 commit objects."""
+        _, _, commits = get_objects_by_type()
+        assert len(commits) == 5, f"Expected 5 commits, found {len(commits)}"
+
+    def test_commit_trees_valid(self):
+        """Every commit's tree hash exists and is a tree object."""
         _, _, commits = get_objects_by_type()
         objects = get_all_objects()
         for commit_hash, content in commits.items():
-            lines = content.split("\n")
-            for line in lines:
-                if line.startswith("parent "):
-                    parent_hash = line.split(" ")[1]
-                    assert parent_hash in objects, (
-                        f"Parent commit {parent_hash} not found"
-                    )
+            tree_hash = get_commit_tree(content)
+            assert tree_hash in objects, (
+                f"Commit {commit_hash} tree {tree_hash} not found"
+            )
+            assert classify_object(objects[tree_hash]) == "tree", (
+                f"Commit {commit_hash} tree {tree_hash} is not a tree"
+            )
+
+    def test_commit_parents_valid(self):
+        """Every commit's parent references exist and are commits."""
+        _, _, commits = get_objects_by_type()
+        objects = get_all_objects()
+        for commit_hash, content in commits.items():
+            parents = get_commit_parents(content)
+            for parent in parents:
+                assert parent in objects, (
+                    f"Commit {commit_hash} parent {parent} not found"
+                )
+                assert classify_object(objects[parent]) == "commit", (
+                    f"Commit {commit_hash} parent {parent} is not a commit"
+                )
+
+    def test_commit_messages_preserved(self):
+        """All expected commit messages exist in the store.
+        
+        The store history must contain these exact commit messages:
+        - 'Initial project setup'
+        - 'Add data processing module'
+        - 'Refactor utilities'
+        - 'Add configuration validation'
+        - 'Implement caching layer'
+        """
+        _, _, commits = get_objects_by_type()
+        messages = {get_commit_message(c) for c in commits.values()}
+        expected_messages = {
+            "Initial project setup",
+            "Add data processing module",
+            "Refactor utilities",
+            "Add configuration validation",
+            "Implement caching layer",
+        }
+        assert expected_messages == messages, (
+            f"Commit messages mismatch.\n"
+            f"  Expected: {sorted(expected_messages)}\n"
+            f"  Found: {sorted(messages)}"
+        )
+
+    def test_commit_topology(self):
+        """Commit parent chain forms correct DAG structure.
+        
+        Expected topology:
+        - One root commit (no parents) with message 'Initial project setup'
+        - One commit with parent=root, message 'Add data processing module'
+        - Linear chain from root through 4 commits on main
+        - One commit branching from 'Add data processing module'
+        """
+        _, _, commits = get_objects_by_type()
+        
+        # Find root commit (no parents)
+        roots = []
+        for h, c in commits.items():
+            if not get_commit_parents(c):
+                roots.append((h, c))
+        assert len(roots) == 1, f"Expected 1 root commit, found {len(roots)}"
+        root_hash = roots[0][0]
+        root_msg = get_commit_message(roots[0][1])
+        assert root_msg == "Initial project setup", (
+            f"Root commit message wrong: '{root_msg}'"
+        )
+        
+        # Find commits with root as parent
+        children_of_root = []
+        for h, c in commits.items():
+            if root_hash in get_commit_parents(c):
+                children_of_root.append((h, c))
+        assert len(children_of_root) == 1, (
+            f"Expected 1 child of root, found {len(children_of_root)}"
+        )
+        commit2_hash = children_of_root[0][0]
+        assert get_commit_message(children_of_root[0][1]) == "Add data processing module"
+        
+        # Find commits with commit2 as parent (should be 2: commit3 and commit5)
+        children_of_2 = []
+        for h, c in commits.items():
+            if commit2_hash in get_commit_parents(c):
+                children_of_2.append((h, c))
+        assert len(children_of_2) == 2, (
+            f"Expected 2 children of 'Add data processing module', found {len(children_of_2)}. "
+            f"Check branch topology - main and feature should diverge after commit 2."
+        )
+        
+        # Verify the two branches
+        branch_messages = {get_commit_message(c) for _, c in children_of_2}
+        assert "Refactor utilities" in branch_messages, (
+            "Missing 'Refactor utilities' as child of 'Add data processing module'"
+        )
+        assert "Implement caching layer" in branch_messages, (
+            "Missing 'Implement caching layer' as child of 'Add data processing module'"
+        )
 
 
 class TestRefsIntegrity:
     """Tests for reference integrity."""
 
-    def test_head_ref_valid(self):
-        """HEAD points to an existing commit object."""
+    def test_head_resolves_to_commit(self):
+        """HEAD (via symref) resolves to an existing commit."""
         head_path = os.path.join(REFS_DIR, "HEAD")
         assert os.path.exists(head_path), "refs/HEAD missing"
         with open(head_path) as f:
-            head_hash = f.read().strip()
-        assert os.path.exists(os.path.join(OBJECTS_DIR, head_hash)), (
-            f"HEAD points to non-existent {head_hash}"
+            head_content = f.read().strip()
+        
+        # HEAD should be a symref to refs/heads/main
+        assert head_content.startswith("ref: "), (
+            f"HEAD should be a symbolic reference, got: {head_content}"
         )
-        # Verify it's actually a commit
-        with open(os.path.join(OBJECTS_DIR, head_hash)) as f:
-            content = f.read()
-        assert classify_object(content) == "commit", (
-            f"HEAD {head_hash} is not a commit"
+        
+        ref_target = head_content[5:]
+        assert ref_target == "refs/heads/main", (
+            f"HEAD should point to refs/heads/main, got: {ref_target}"
         )
 
-    def test_head_is_latest_commit(self):
-        """HEAD points to the most recent commit (one with a parent)."""
-        head_path = os.path.join(REFS_DIR, "HEAD")
-        with open(head_path) as f:
-            head_hash = f.read().strip()
-        with open(os.path.join(OBJECTS_DIR, head_hash)) as f:
+    def test_main_branch_valid(self):
+        """refs/heads/main points to a valid commit with correct message."""
+        main_path = os.path.join(REFS_DIR, "heads", "main")
+        assert os.path.exists(main_path), "refs/heads/main missing"
+        with open(main_path) as f:
+            commit_hash = f.read().strip()
+        
+        assert os.path.exists(os.path.join(OBJECTS_DIR, commit_hash)), (
+            f"refs/heads/main points to non-existent {commit_hash}"
+        )
+        with open(os.path.join(OBJECTS_DIR, commit_hash)) as f:
             content = f.read()
-        # Latest commit has a parent
-        header_section = content.split("\n\n")[0]
-        assert "parent " in header_section, (
-            "HEAD does not point to the latest commit (missing parent)"
+        assert classify_object(content) == "commit", (
+            f"refs/heads/main {commit_hash} is not a commit"
+        )
+        msg = get_commit_message(content)
+        assert msg == "Add configuration validation", (
+            f"Main branch tip should be 'Add configuration validation', got '{msg}'"
+        )
+
+    def test_feature_branch_valid(self):
+        """refs/heads/feature points to a valid commit with correct message."""
+        feature_path = os.path.join(REFS_DIR, "heads", "feature")
+        assert os.path.exists(feature_path), "refs/heads/feature missing"
+        with open(feature_path) as f:
+            commit_hash = f.read().strip()
+        
+        assert os.path.exists(os.path.join(OBJECTS_DIR, commit_hash)), (
+            f"refs/heads/feature points to non-existent {commit_hash}"
+        )
+        with open(os.path.join(OBJECTS_DIR, commit_hash)) as f:
+            content = f.read()
+        assert classify_object(content) == "commit", (
+            f"refs/heads/feature {commit_hash} is not a commit"
+        )
+        msg = get_commit_message(content)
+        assert msg == "Implement caching layer", (
+            f"Feature branch tip should be 'Implement caching layer', got '{msg}'"
         )
 
 
@@ -259,7 +384,7 @@ class TestIndexIntegrity:
     """Tests for index integrity."""
 
     def test_index_entries_valid(self):
-        """All index paths map to existing blobs."""
+        """All index paths map to existing blob objects."""
         with open(INDEX_FILE) as f:
             index = json.load(f)
         for path, blob_hash in index.items():
@@ -267,18 +392,36 @@ class TestIndexIntegrity:
                 f"Index entry {path} points to non-existent blob {blob_hash}"
             )
 
-    def test_index_complete(self):
-        """Index has entries for all 6 source files."""
+    def test_index_matches_main_branch(self):
+        """Index should reflect the main branch (commit 4) file state.
+        
+        Expected files: main.py, utils.py, config.json, README.md,
+        processor.py, lib/helper.py, lib/constants.py
+        """
         with open(INDEX_FILE) as f:
             index = json.load(f)
         expected_paths = {
             "main.py", "utils.py", "config.json", "README.md",
-            "lib/helper.py", "lib/constants.py"
+            "processor.py", "lib/helper.py", "lib/constants.py"
         }
         assert set(index.keys()) == expected_paths, (
-            f"Index paths mismatch. Got: {set(index.keys())}, "
-            f"Expected: {expected_paths}"
+            f"Index paths mismatch.\n"
+            f"  Got: {sorted(index.keys())}\n"
+            f"  Expected: {sorted(expected_paths)}"
         )
+
+    def test_index_blobs_match_source(self):
+        """Index blob hashes match actual source file content hashes."""
+        sources = read_source_files()
+        with open(INDEX_FILE) as f:
+            index = json.load(f)
+        for path, blob_hash in index.items():
+            assert path in sources, f"Index path {path} not in source files"
+            expected_hash = compute_blob_hash(sources[path])
+            assert blob_hash == expected_hash, (
+                f"Index entry {path}: hash {blob_hash} doesn't match "
+                f"source content hash {expected_hash}"
+            )
 
 
 class TestIntegrityReport:

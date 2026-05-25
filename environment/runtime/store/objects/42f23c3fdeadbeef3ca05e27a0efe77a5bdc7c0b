@@ -4,12 +4,14 @@
 import sys
 from utils import format_output, validate_input
 from lib.helper import process_data
+from processor import transform_batch
 
 
 def main():
     """Run the main application logic."""
     data = validate_input(sys.argv[1:])
-    result = process_data(data)
+    batch = transform_batch(data)
+    result = process_data(batch)
     output = format_output(result)
     print(output)
     return 0

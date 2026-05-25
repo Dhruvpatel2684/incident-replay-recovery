@@ -4,18 +4,18 @@ category = "version-control"
 difficulty = "hard"
 tags = ["git", "object-store", "sha1", "content-addressable", "integrity-repair"]
 
-difficulty_explanation = "Requires understanding git-style content-addressable storage, SHA-1 hash computation with type-length headers, and cascading hash dependencies where fixing one object invalidates dependent objects. The agent must reason about the full dependency chain and reconstruct a consistent store from ground truth source files and existing historical objects."
-solution_explanation = "The repair script reads source files to recompute correct blob hashes, identifies the historical blob (old main.py), rebuilds tree objects with correct references, rebuilds commit objects with correct tree hashes and parent linkage, fixes the HEAD reference to point to the latest commit, and rebuilds the index with valid blob hashes. All repairs cascade: fixing blobs changes tree content which changes tree hash which changes commit content which changes commit hash which changes what HEAD must reference."
-verification_explanation = "Tests verify the repaired store by checking: all object filenames match SHA-1 of content with type-length headers, correct object counts by type (7 blobs, 3 trees, 2 commits), tree references resolve to existing objects, commit tree/parent references are valid, HEAD points to latest commit (the one with a parent), index maps all 6 source paths to existing blobs, and blob content matches source files. An integrity report must show all checks passing."
-expert_time_estimate_hours = 2.5
+difficulty_explanation = "Requires understanding git-style content-addressable storage with cascading hash dependencies, multi-branch commit topology reconstruction, and extracting preserved metadata from corrupted objects. The agent must reason about which information can be derived from source files versus which must be recovered from the corrupted store (commit messages, timestamps, branch topology)."
+solution_explanation = "The repair script reads source files for current blob hashes, extracts commit metadata (messages, authors, timestamps) from corrupted commit objects, identifies historical blob versions by structural analysis, reconstructs the complete tree hierarchy for each commit, rebuilds commits with correct tree hashes but preserved metadata, and fixes all references. The key challenge is the multi-step reasoning: source files only give you the latest state, historical file versions must be identified from existing blobs, and commit metadata must be extracted from objects whose tree references are broken."
+verification_explanation = "Tests verify: all object filenames match SHA-1 of content, tree entries resolve to existing objects, commit tree/parent references are valid, exactly 5 commits exist with correct messages and DAG topology (branching after commit 2), refs/heads/main points to 'Add configuration validation' commit, refs/heads/feature points to 'Implement caching layer' commit, HEAD is symref to refs/heads/main, index maps 7 source paths to correct blob hashes, and integrity report shows all pass."
+expert_time_estimate_hours = 3.0
 
 [task]
 name = "git-object-store-repair"
-description = "Repair a corrupted git-style content-addressable object store by recomputing SHA-1 hashes, rebuilding tree and commit objects, and restoring reference integrity"
+description = "Repair a corrupted git-style content-addressable object store with multi-branch history by recomputing hashes, rebuilding the object graph, and preserving commit metadata"
 
 [task.difficulty]
 level = "hard"
-reasoning = "Requires deep understanding of content-addressable storage semantics, cascading hash dependencies, and careful reconstruction of a multi-layer object graph from ground truth data"
+reasoning = "Requires deep understanding of content-addressable storage, cascading hash dependencies, multi-branch DAG reconstruction, and selective information recovery from corrupted state"
 
 [task.runtime]
 entrypoint = "python3 -m runtime.run_store"
@@ -24,11 +24,11 @@ dependencies = "stdlib-only"
 
 [task.validator]
 command = "bash tests/test.sh"
-description = "Runs pytest against 18 test functions checking blob hashes, tree references, commit structure, HEAD validity, index integrity, and overall integrity report"
+description = "Runs pytest against 20 test functions checking blob hashes, tree references, commit structure, branch topology, commit messages, HEAD validity, index integrity, and overall integrity report"
 
 [task.repair]
 command = "bash solution/solve.sh"
-description = "Executes repair script that reads source files, recomputes all hashes, rebuilds objects with correct names, fixes references and index, then runs verifier"
+description = "Executes repair script that reads source files, extracts metadata from corrupted commits, identifies historical blobs, rebuilds object graph, fixes references and index, then runs verifier"
 
 [task.resources]
 timeout = 300

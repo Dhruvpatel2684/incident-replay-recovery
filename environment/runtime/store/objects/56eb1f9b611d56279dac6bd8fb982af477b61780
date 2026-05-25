@@ -1,0 +1,30 @@
+"""Simple caching layer for processed results."""
+
+import hashlib
+import json
+import os
+
+CACHE_DIR = "/tmp/dp_cache"
+
+
+def get_cache_key(data):
+    """Generate cache key from input data."""
+    serialized = json.dumps(data, sort_keys=True)
+    return hashlib.md5(serialized.encode()).hexdigest()
+
+
+def cache_result(key, result):
+    """Store result in cache."""
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    path = os.path.join(CACHE_DIR, f"{key}.json")
+    with open(path, "w") as f:
+        json.dump(result, f)
+
+
+def get_cached(key):
+    """Retrieve cached result."""
+    path = os.path.join(CACHE_DIR, f"{key}.json")
+    if os.path.exists(path):
+        with open(path) as f:
+            return json.load(f)
+    return None
