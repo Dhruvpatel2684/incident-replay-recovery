@@ -1,0 +1,5 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "debugging"
+tags = ["cryptography", "encoding", "security", "pipeline", "key-derivation"]
+difficulty = "hard"
