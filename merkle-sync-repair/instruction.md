@@ -41,7 +41,45 @@ The "performance optimization" touched the tree hashing (something about "dedupl
 python3 /app/runtime/sync_engine.py
 ```
 
-Produces `sync_result.json` (merged key-value state) and `sync_report.json` (statistics) in `/app/runtime/`.
+Produces `sync_result.json` and `sync_report.json` in `/app/runtime/`.
+
+## Output Schema
+
+### sync_result.json
+
+A flat JSON object mapping data keys to their resolved values:
+
+```json
+{
+  "data:1000": {"name": "item_0", "score": 10},
+  "data:1012": {"priority": "high", "status": "active"},
+  ...
+}
+```
+
+Keys that are correctly tombstoned (deleted) should not appear. Keys that survive conflict resolution should have the winning replica's value as-is.
+
+### sync_report.json
+
+```json
+{
+  "replicas_processed": 3,
+  "total_keys_seen": <int>,
+  "divergent_keys_detected": <int>,
+  "conflicts_resolved": <int>,
+  "sync_operations": [
+    {"key": "data:XXXX", "action": "resolve"|"delete", "source_replica": "<id>"}
+  ],
+  "integrity_hash": "<16-char hex string>"
+}
+```
+
+- `replicas_processed`: always 3
+- `total_keys_seen`: count of unique keys across all replicas
+- `divergent_keys_detected`: how many keys the Merkle diff found as different
+- `conflicts_resolved`: how many divergent keys got resolved to a live value
+- `sync_operations`: one entry per divergent key describing what happened
+- `integrity_hash`: SHA-256 (first 16 hex chars) of the merged state, computed by hashing `key=json.dumps(value, sort_keys=True)\n` for each key in sorted order
 
 ## What to fix
 
