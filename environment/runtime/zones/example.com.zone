@@ -1,0 +1,33 @@
+$TTL 300
+example.com.        IN  SOA   ns1.example.com. admin.example.com. 10 3600 900 604800 300
+example.com.        IN  NS    ns1.example.com.
+example.com.        IN  NS    ns2.example.com.
+example.com.        IN  A     93.184.216.34
+ns1.example.com.    IN  A     93.184.216.1
+ns2.example.com.    IN  A     93.184.216.2
+
+; Exact match that must take precedence over wildcard
+www.example.com.    IN  A     93.184.216.34
+api.example.com.    IN  A     93.184.216.40
+
+; Mail with CNAME indirection
+mail.example.com.   IN  CNAME mx-pool.example.com.
+mx-pool.example.com. IN A    93.184.216.50
+mx-pool.example.com. IN MX   10 mx-pool.example.com.
+
+; Wildcard catch-all
+*.example.com.      IN  A     93.184.216.100
+
+; CNAME chain of exactly 5 hops (at max_cname_depth boundary)
+hop1.example.com.   IN  CNAME hop2.example.com.
+hop2.example.com.   IN  CNAME hop3.example.com.
+hop3.example.com.   IN  CNAME hop4.example.com.
+hop4.example.com.   IN  CNAME hop5.example.com.
+hop5.example.com.   IN  A     93.184.216.200
+
+; Short chain (2 hops — under limit)
+alias.example.com.  IN  CNAME target.example.com.
+target.example.com. IN  A     93.184.216.75
+
+; TTL-specific record
+cached.example.com. 60  IN  A  93.184.216.99

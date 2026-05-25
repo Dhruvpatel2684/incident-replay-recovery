@@ -1,0 +1,12 @@
+[
+  {"name": "www.example.com", "type": "A"},
+  {"name": "unknown.example.com", "type": "A"},
+  {"name": "hop1.example.com", "type": "A"},
+  {"name": "alias.example.com", "type": "A"},
+  {"name": "mail.example.com", "type": "MX"},
+  {"name": "app.internal.dev", "type": "A"},
+  {"name": "random.internal.dev", "type": "A"},
+  {"name": "cached.example.com", "type": "A"},
+  {"name": "example.com", "type": "A"},
+  {"name": "nonexistent.example.com", "type": "AAAA"}
+]
