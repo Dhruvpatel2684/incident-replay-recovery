@@ -91,8 +91,8 @@ def resolve_entries(entries_by_replica):
             # Current winner dominates, keep it
             pass
         else:
-            # Concurrent: deterministic tiebreak by replica ID (higher wins)
-            if other_id > winner_id:
+            # Concurrent: deterministic tiebreak by replica ID (lower wins)
+            if other_id < winner_id:
                 winner_id = other_id
                 winner_entry = other_entry
 

@@ -9,27 +9,6 @@ for distributed deletion semantics.
 import json
 
 
-def vclock_dominates(va, vb):
-    """Check if vector clock va causally dominates vb.
-
-    va dominates vb iff:
-        - For all keys k: va[k] >= vb[k]
-        - There exists at least one key k where va[k] > vb[k]
-
-    Returns True if va strictly dominates vb.
-    """
-    all_keys = set(va.keys()) | set(vb.keys())
-    at_least_one_greater = False
-    for k in all_keys:
-        a_val = va.get(k, 0)
-        b_val = vb.get(k, 0)
-        if a_val < b_val:
-            return False
-        if a_val > b_val:
-            at_least_one_greater = True
-    return at_least_one_greater
-
-
 class ConflictResolver:
     """Resolves conflicts between divergent replica entries."""
 
@@ -66,12 +45,61 @@ class ConflictResolver:
         return resolved
 
     def _merge_entries(self, key, entries_by_replica):
-        """Tombstones are replica-local markers for local deletion intent.
-        Each replica independently decides key lifecycle."""
-        live_entries = {r: e for r, e in entries_by_replica.items() if not e.get("tombstone")}
-        if live_entries:
-            return self._resolve_among(key, live_entries)
-        return list(entries_by_replica.values())[0]
+        """Merge entries across replicas with tombstone awareness.
+
+        Tombstone propagation follows causal ordering: if a live entry
+        causally dominates all tombstones for this key, the key remains
+        alive. Otherwise, the deletion is authoritative.
+
+        This implements the "resurrection guard" pattern where a key can
+        only survive deletion if there is positive causal evidence that
+        the key was re-created AFTER the deletion event.
+        """
+        tombstone_entries = {r: e for r, e in entries_by_replica.items()
+                            if e.get("tombstone")}
+        live_entries = {r: e for r, e in entries_by_replica.items()
+                       if not e.get("tombstone")}
+
+        if tombstone_entries and live_entries:
+            # Resurrection guard: key stays alive only if at least one live
+            # entry causally dominates ALL tombstones (positive re-creation
+            # evidence). If no live entry can prove it was written after
+            # every deletion, the tombstones win by default.
+            has_resurrection = False
+            for l_replica, l_entry in live_entries.items():
+                dominates_all_tombstones = True
+                for t_replica, t_entry in tombstone_entries.items():
+                    if not self._vclock_dominates(l_entry["vclock"], t_entry["vclock"]):
+                        dominates_all_tombstones = False
+                        break
+                if dominates_all_tombstones:
+                    has_resurrection = True
+                    break
+            if not has_resurrection:
+                return None  # Tombstones win
+
+        if not live_entries:
+            return None
+
+        return self._resolve_among(key, live_entries)
+
+    def _vclock_dominates(self, va, vb):
+        """Check if vector clock va causally dominates vb.
+
+        va dominates vb iff:
+            - For all keys k: va[k] >= vb[k]
+            - There exists at least one key k where va[k] > vb[k]
+        """
+        all_keys = set(va.keys()) | set(vb.keys())
+        at_least_one_greater = False
+        for k in all_keys:
+            a_val = va.get(k, 0)
+            b_val = vb.get(k, 0)
+            if a_val < b_val:
+                return False
+            if a_val > b_val:
+                at_least_one_greater = True
+        return at_least_one_greater
 
     def _resolve_among(self, key, entries_by_replica):
         """Resolve conflict among multiple live entries."""
@@ -79,7 +107,7 @@ class ConflictResolver:
             return list(entries_by_replica.values())[0]
 
         # Pairwise resolution
-        items = list(entries_by_replica.items())
+        items = sorted(entries_by_replica.items())
         winner_id, winner_entry = items[0]
         for i in range(1, len(items)):
             other_id, other_entry = items[i]
@@ -93,7 +121,8 @@ class ConflictResolver:
 
     def _resolve_conflict(self, key, entry_a, entry_b, id_a="A", id_b="B"):
         """Resolve divergent entries using timestamp-based last-writer-wins.
-        Wall-clock provides total ordering for deterministic resolution."""
+        Wall-clock provides total ordering for deterministic resolution
+        without requiring distributed coordination protocol overhead."""
         if entry_a["last_modified"] >= entry_b["last_modified"]:
             return entry_a
         return entry_b

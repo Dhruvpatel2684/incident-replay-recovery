@@ -204,28 +204,28 @@ class TestTier3DiffAndResolution:
         )
 
     def test_concurrent_conflict_tiebreak(self):
-        """Concurrent conflicts must use deterministic replica ID tiebreak.
+        """Concurrent conflicts must use deterministic tiebreak by replica ID.
 
         data:1016: A has vclock {A:4,B:1,C:2}, B has {A:1,B:4,C:2}.
-        Neither dominates the other (concurrent). Tiebreak: higher replica
-        ID wins. B > A alphabetically, so B's value wins.
+        Neither dominates the other (concurrent). Tiebreak: lower replica
+        ID wins for consistency (alphabetical first). A < B, so A's value wins.
 
         data:1017: A has vclock {A:5,B:2,C:1}, B has {A:2,B:5,C:1}.
-        Concurrent. B > A, so B wins.
+        Concurrent. A < B, so A wins.
         """
         result = load_result()
 
         assert "data:1016" in result, "data:1016 must exist in sync_result"
-        assert result["data:1016"]["mode"] == "batch", (
-            f"data:1016 mode should be 'batch' (from replica B, concurrent "
-            f"conflict tiebreak by replica ID: B > A), got "
+        assert result["data:1016"]["mode"] == "stream", (
+            f"data:1016 mode should be 'stream' (from replica A, concurrent "
+            f"conflict tiebreak by replica ID: A < B), got "
             f"'{result['data:1016']['mode']}'"
         )
 
         assert "data:1017" in result, "data:1017 must exist in sync_result"
-        assert result["data:1017"]["level"] == "error", (
-            f"data:1017 level should be 'error' (from replica B, concurrent "
-            f"conflict tiebreak by replica ID: B > A), got "
+        assert result["data:1017"]["level"] == "warn", (
+            f"data:1017 level should be 'warn' (from replica A, concurrent "
+            f"conflict tiebreak by replica ID: A < B), got "
             f"'{result['data:1017']['level']}'"
         )
 
@@ -305,7 +305,7 @@ class TestTier4FullIntegrity:
         All five bugs must be fixed for the hash to match.
         """
         report = load_report()
-        expected_hash = "2d9ee0d792bac20a"
+        expected_hash = "f12a9597d106ca2e"
         assert report["integrity_hash"] == expected_hash, (
             f"Integrity hash mismatch. Expected '{expected_hash}', got "
             f"'{report['integrity_hash']}'. This hash depends on the entire "
