@@ -47,13 +47,14 @@ class ConflictResolver:
     def _merge_entries(self, key, entries_by_replica):
         """Merge entries across replicas with tombstone awareness.
 
-        Tombstone propagation follows causal ordering: if a live entry
-        causally dominates all tombstones for this key, the key remains
-        alive. Otherwise, the deletion is authoritative.
+        Tombstone semantics: a deletion is authoritative only when the
+        tombstone's vector clock causally dominates all live entries for
+        that key (proving the delete happened after every write). If the
+        tombstone is merely concurrent with a live entry, we cannot prove
+        temporal ordering and the key must survive.
 
-        This implements the "resurrection guard" pattern where a key can
-        only survive deletion if there is positive causal evidence that
-        the key was re-created AFTER the deletion event.
+        Implementation uses vclock_dominates to check causal relationships
+        between tombstone and live entry clocks.
         """
         tombstone_entries = {r: e for r, e in entries_by_replica.items()
                             if e.get("tombstone")}
@@ -61,10 +62,9 @@ class ConflictResolver:
                        if not e.get("tombstone")}
 
         if tombstone_entries and live_entries:
-            # Resurrection guard: key stays alive only if at least one live
-            # entry causally dominates ALL tombstones (positive re-creation
-            # evidence). If no live entry can prove it was written after
-            # every deletion, the tombstones win by default.
+            # Check if key can survive: require positive evidence that a
+            # live write causally post-dates every deletion event.
+            # vclock_dominates(a, b) = True means a happened after b.
             has_resurrection = False
             for l_replica, l_entry in live_entries.items():
                 dominates_all_tombstones = True
