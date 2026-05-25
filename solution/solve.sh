@@ -1,12 +1,16 @@
 #!/bin/bash
 # Git Object Store Repair — Oracle solution
 #
-# 1. Run the store verifier to produce initial (defective) integrity report
-# 2. Execute repair script that recomputes all hashes, rebuilds trees/commits,
-#    fixes refs and index by reading ground truth source files
-# 3. Re-run verifier to produce clean integrity report
+# Executes repair script that recomputes all hashes from ground truth
+# source files, rebuilds the complete object graph with correct
+# cascading dependencies, then runs verifier for clean report.
 
 set -e
 
-python3 /app/runtime/run_store.py || true
+cd /app
+
+# Run repair (rebuilds all objects, refs, index from source_files/)
 python3 /solution/repair_store.py
+
+# Run verifier to produce integrity_report.json
+python3 /app/runtime/run_store.py

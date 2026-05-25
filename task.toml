@@ -2,8 +2,36 @@ author_name = "Dhruvkumar Patel"
 author_email = "dhruvpatel2284@gmail.com"
 category = "version-control"
 difficulty = "hard"
-tags = ["git", "object-store", "sha1", "content-addressable", "python"]
-difficulty_explanation = "Requires understanding git-style content-addressable storage, SHA-1 hash computation with type-length headers, and cascading hash dependencies where fixing one object invalidates dependent objects. The agent must reason about the full dependency chain: blobs → trees → commits → refs."
-solution_explanation = "The repair script reads source files to recompute correct blob hashes, rebuilds tree objects with correct references, rebuilds commit objects with correct tree hashes, fixes the HEAD reference to point to the latest commit, and rebuilds the index with valid blob hashes. The key insight is that all repairs must cascade: fixing blobs changes tree content which changes tree hash which changes commit content which changes commit hash which changes what HEAD must reference."
-verification_explanation = "Tests verify the repaired store by checking: all object filenames match SHA-1 of content, correct object counts by type, tree references resolve to existing objects, commit tree/parent references are valid, HEAD points to latest commit, index maps to existing blobs, and blob content matches source files. An integrity report must show all checks passing."
+tags = ["git", "object-store", "sha1", "content-addressable", "integrity-repair"]
+
+difficulty_explanation = "Requires understanding git-style content-addressable storage, SHA-1 hash computation with type-length headers, and cascading hash dependencies where fixing one object invalidates dependent objects. The agent must reason about the full dependency chain and reconstruct a consistent store from ground truth source files and existing historical objects."
+solution_explanation = "The repair script reads source files to recompute correct blob hashes, identifies the historical blob (old main.py), rebuilds tree objects with correct references, rebuilds commit objects with correct tree hashes and parent linkage, fixes the HEAD reference to point to the latest commit, and rebuilds the index with valid blob hashes. All repairs cascade: fixing blobs changes tree content which changes tree hash which changes commit content which changes commit hash which changes what HEAD must reference."
+verification_explanation = "Tests verify the repaired store by checking: all object filenames match SHA-1 of content with type-length headers, correct object counts by type (7 blobs, 3 trees, 2 commits), tree references resolve to existing objects, commit tree/parent references are valid, HEAD points to latest commit (the one with a parent), index maps all 6 source paths to existing blobs, and blob content matches source files. An integrity report must show all checks passing."
 expert_time_estimate_hours = 2.5
+
+[task]
+name = "git-object-store-repair"
+description = "Repair a corrupted git-style content-addressable object store by recomputing SHA-1 hashes, rebuilding tree and commit objects, and restoring reference integrity"
+
+[task.difficulty]
+level = "hard"
+reasoning = "Requires deep understanding of content-addressable storage semantics, cascading hash dependencies, and careful reconstruction of a multi-layer object graph from ground truth data"
+
+[task.runtime]
+entrypoint = "python3 -m runtime.run_store"
+language = "python"
+dependencies = "stdlib-only"
+
+[task.validator]
+command = "bash tests/test.sh"
+description = "Runs pytest against 18 test functions checking blob hashes, tree references, commit structure, HEAD validity, index integrity, and overall integrity report"
+
+[task.repair]
+command = "bash solution/solve.sh"
+description = "Executes repair script that reads source files, recomputes all hashes, rebuilds objects with correct names, fixes references and index, then runs verifier"
+
+[task.resources]
+timeout = 300
+cpu = 2
+memory = "2GB"
+disk = "1GB"

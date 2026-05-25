@@ -1,7 +1,10 @@
 #!/bin/bash
+# Git Object Store Repair — Test harness
+# Runs verifier to produce integrity report, then validates with pytest
 
 mkdir -p /logs/verifier
 
+# Run the store verifier to produce integrity report if not already present
 if [ ! -f /app/runtime/output/integrity_report.json ]; then
     python3 /app/runtime/run_store.py || true
 fi
@@ -9,8 +12,8 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 set +e
-python3 -m pytest -v "${SCRIPT_DIR}/test_store.py"
-TEST_EXIT=$?
+uv run --with pytest pytest -v "${SCRIPT_DIR}/test_store.py" 2>&1 | tee /logs/verifier/output.log
+TEST_EXIT=${PIPESTATUS[0]}
 set -e
 
 if [ "$TEST_EXIT" -eq 0 ]; then
