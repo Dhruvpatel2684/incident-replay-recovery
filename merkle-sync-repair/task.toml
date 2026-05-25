@@ -3,9 +3,9 @@ author_email = "dhruvpatel2284@gmail.com"
 category = "distributed_systems"
 difficulty = "hard"
 tags = ["merkle-tree", "anti-entropy", "distributed-storage", "vector-clocks", "sync", "replication", "debugging"]
-difficulty_explanation = "Requires understanding Merkle tree hash semantics (content-addressable vs structural), tree traversal for diff detection, vector clock causality vs wall-clock ordering, and tombstone propagation in anti-entropy protocols. Five interacting bugs span tree construction, diff detection, and conflict resolution with plausible misleading comments."
-solution_explanation = "The oracle re-processes replica data with correct leaf hashing (key+value+vclock), concatenation-based interior nodes, recursive leaf-level diff detection, vector clock causal resolution with deterministic tiebreaking, and tombstone dominance propagation."
-verification_explanation = "14 tests in 4 tiers: structural checks pass with buggy code, tree construction tests need Bugs 1-2 fixed, diff/resolution tests need Bugs 3-4 fixed, and integrity tests need all 5 bugs fixed simultaneously."
+difficulty_explanation = "Requires understanding Merkle tree hash semantics (content-addressable vs structural), reversed concatenation order for interior hashing, tree traversal for diff detection, and vector clock causality vs wall-clock ordering. Four interacting bugs span tree construction, diff detection, and conflict resolution with plausible misleading comments."
+solution_explanation = "The oracle re-processes replica data with correct leaf hashing (key+value+vclock), concatenation-based interior nodes, recursive leaf-level diff detection, and vector clock causal resolution with deterministic tiebreaking."
+verification_explanation = "14 tests in 4 tiers: structural checks pass with buggy code, tree construction tests need Bugs 1-2 fixed, diff/resolution tests need Bugs 3-4 fixed, and integrity tests need all 4 bugs fixed simultaneously."
 expert_time_estimate_hours = 2.5
 
 [task]

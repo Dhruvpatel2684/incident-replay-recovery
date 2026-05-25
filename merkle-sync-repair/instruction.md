@@ -27,13 +27,13 @@ The sync engine runs without crashing but produces garbage:
 
 2. **When I hack past the diff issue, wrong winners get picked** -- keys where replica B clearly has the newer vector clock are resolving to replica A's value instead. I checked the data three times. B dominates A's vclock on those keys. But the resolver picks A anyway. There's a `vclock_dominates` function right there in the file that looks correct, so I have no idea why resolution is wrong.
 
-3. **Deleted keys keep coming back** -- we have tombstoned keys where the deletion causally dominates the live version. The tombstone's vector clock is strictly greater. But the merged output still has those keys alive. It's like tombstones are being ignored entirely.
+3. **Tombstoned keys aren't being removed** -- we have keys where one replica has a tombstone with a vector clock that strictly dominates all live entries. Those keys should be deleted from the merged output. But they're showing up anyway because (I think) the diff detector never identifies them as divergent in the first place, so the conflict resolver never gets a chance to apply tombstone logic.
 
 4. **Inflated diff sets** -- on a test run where I manually forced tree divergence, the diff set included keys that are actually identical across replicas. It's returning entire subtrees instead of just the actually-divergent keys.
 
 ## What I think is happening
 
-The "performance optimization" touched the tree hashing (something about "deduplication efficiency"), the tree comparison (something about "batch processing"), and the conflict resolution (something about "reducing coordination overhead"). Each of those areas seems broken in a different way, and the bugs mask each other -- fixing the tree hash alone doesn't help because the diff traversal is also wrong.
+The "performance optimization" touched the tree hashing (something about "traversal order optimization"), the tree comparison (something about "batch processing"), and the conflict resolution (something about "reducing coordination overhead"). Each of those areas seems broken in a different way, and the bugs mask each other -- fixing the tree hash alone doesn't help because the diff traversal is also wrong.
 
 ## How to run
 
@@ -85,6 +85,6 @@ Keys that are correctly tombstoned (deleted) should not appear. Keys that surviv
 
 The problems are in `merkle_tree.py`, `diff_detector.py`, and `conflict_resolver.py`. The sync engine, replica loader, and output writer are all fine.
 
-I'd guess there are around 5 distinct bugs across those three files. They interact, so fixing them one at a time won't necessarily show progress in the tests until you get the related ones too.
+I'd guess there are around 4 distinct bugs across those three files. They interact, so fixing them one at a time won't necessarily show progress in the tests until you get the related ones too.
 
 Standard library only. No external packages.

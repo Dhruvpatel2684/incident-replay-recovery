@@ -256,22 +256,22 @@
     "tombstone": true,
     "value": null,
     "vclock": {
-      "A": 3,
+      "A": 7,
       "B": 6,
-      "C": 3
+      "C": 5
     },
-    "version": 9
+    "version": 12
   },
   "data:1019": {
     "last_modified": "2024-01-15T13:00:00Z",
     "tombstone": true,
     "value": null,
     "vclock": {
-      "A": 6,
-      "B": 1,
+      "A": 5,
+      "B": 6,
       "C": 4
     },
-    "version": 8
+    "version": 11
   },
   "data:1020": {
     "last_modified": "2024-01-15T06:00:00Z",

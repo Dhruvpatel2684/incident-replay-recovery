@@ -46,15 +46,10 @@ class ConflictResolver:
 
     def _merge_entries(self, key, entries_by_replica):
         """Merge entries across replicas with tombstone awareness.
-
-        Tombstone semantics: a deletion is authoritative only when the
-        tombstone's vector clock causally dominates all live entries for
-        that key (proving the delete happened after every write). If the
-        tombstone is merely concurrent with a live entry, we cannot prove
-        temporal ordering and the key must survive.
-
-        Implementation uses vclock_dominates to check causal relationships
-        between tombstone and live entry clocks.
+        
+        A tombstone wins only if it causally dominates all live entries
+        (proving deletion happened after every write). Otherwise, the
+        key survives and is resolved among live entries.
         """
         tombstone_entries = {r: e for r, e in entries_by_replica.items()
                             if e.get("tombstone")}
@@ -62,21 +57,15 @@ class ConflictResolver:
                        if not e.get("tombstone")}
 
         if tombstone_entries and live_entries:
-            # Check if key can survive: require positive evidence that a
-            # live write causally post-dates every deletion event.
-            # vclock_dominates(a, b) = True means a happened after b.
-            has_resurrection = False
-            for l_replica, l_entry in live_entries.items():
-                dominates_all_tombstones = True
-                for t_replica, t_entry in tombstone_entries.items():
-                    if not self._vclock_dominates(l_entry["vclock"], t_entry["vclock"]):
-                        dominates_all_tombstones = False
+            # Tombstone wins only if it dominates ALL live entries
+            for t_replica, t_entry in tombstone_entries.items():
+                all_dominated = True
+                for l_replica, l_entry in live_entries.items():
+                    if not self._vclock_dominates(t_entry["vclock"], l_entry["vclock"]):
+                        all_dominated = False
                         break
-                if dominates_all_tombstones:
-                    has_resurrection = True
-                    break
-            if not has_resurrection:
-                return None  # Tombstones win
+                if all_dominated:
+                    return None  # Tombstone wins, key is deleted
 
         if not live_entries:
             return None

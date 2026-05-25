@@ -259,11 +259,11 @@
       "rotate": false
     },
     "vclock": {
-      "A": 2,
-      "B": 2,
-      "C": 2
+      "A": 3,
+      "B": 3,
+      "C": 3
     },
-    "version": 4
+    "version": 6
   },
   "data:1019": {
     "last_modified": "2024-01-15T08:00:00Z",
@@ -273,11 +273,11 @@
       "timeout": 60
     },
     "vclock": {
-      "A": 2,
+      "A": 3,
       "B": 2,
-      "C": 2
+      "C": 3
     },
-    "version": 4
+    "version": 5
   },
   "data:1020": {
     "last_modified": "2024-01-15T06:00:00Z",

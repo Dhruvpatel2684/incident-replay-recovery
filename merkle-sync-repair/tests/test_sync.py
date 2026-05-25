@@ -5,7 +5,7 @@ Test suite for Merkle-tree anti-entropy sync engine.
 - Tier 1 (6 tests): Structural checks - pass with buggy code
 - Tier 2 (3 tests): Tree construction checks - need Bugs 1+2 fixed
 - Tier 3 (3 tests): Diff precision and resolution checks - need Bugs 3+4 fixed
-- Tier 4 (2 tests): Full integrity checks - need all 5 bugs fixed
+- Tier 4 (2 tests): Full integrity checks - need all 4 bugs fixed
 """
 
 import json
@@ -92,7 +92,8 @@ class TestTier2TreeConstruction:
 
     Bug 1 makes leaf hashes ignore entry content (only hashes key names),
     causing all trees to appear identical despite differing values.
-    Bug 2 uses XOR for interior nodes which can mask subtree differences.
+    Bug 2 uses reversed concatenation order (right||left instead of left||right)
+    for interior nodes, producing incorrect positional hashes.
 
     With these bugs, divergent_keys_detected = 0 because tree comparison
     sees no difference. Fixing them exposes the actual divergence.
@@ -257,65 +258,49 @@ class TestTier3DiffAndResolution:
 
 
 # =============================================================================
-# TIER 4: Full integrity tests (need ALL 5 bugs fixed)
+# TIER 4: Full integrity tests (need ALL 4 bugs fixed)
 # =============================================================================
 
 class TestTier4FullIntegrity:
     """Tests that require all bugs to be fixed simultaneously.
 
-    Bug 5 uses a 'resurrection guard' pattern that inverts the correct
-    tombstone check. Instead of asking "does the tombstone dominate all
-    live entries?" it asks "does any live entry dominate the tombstone?"
-    When tombstones are concurrent with live entries (neither dominates),
-    the guard incorrectly kills the key.
+    These tests verify the complete pipeline works end-to-end:
+    correct tree construction, precise diff detection, causal
+    conflict resolution, and tombstone dominance propagation.
     """
 
     def test_tombstone_propagation(self):
-        """Concurrent tombstones must NOT delete keys from result.
+        """Tombstoned keys with dominating vclock must not appear in result.
 
-        data:1018: B has tombstone with vclock {A:3,B:6,C:3}, A has live with
-        vclock {A:5,B:2,C:3}. These are CONCURRENT (A has A:5>3, B has B:6>2).
-        Since the tombstone does NOT causally dominate the live entry, the key
-        must remain alive. A's value wins among live entries.
+        data:1018: B has tombstone with vclock {A:7,B:6,C:5} which dominates
+        A's live {A:5,B:3,C:3} and C's live {A:3,B:3,C:3}. Causal deletion
+        wins - key must not be in sync_result.
 
-        data:1019: B has tombstone with vclock {A:6,B:1,C:4}, A has live with
-        vclock {A:4,B:3,C:5}. CONCURRENT (B has A:6>4, A has B:3>1 and C:5>4).
-        Tombstone does NOT dominate. Key stays alive.
+        data:1019: B has tombstone with vclock {A:5,B:6,C:4} which dominates
+        A's live {A:4,B:3,C:3} and C's live {A:3,B:2,C:3}. Same logic.
 
-        Bug 5 uses a 'resurrection guard' that inverts the check: it requires
-        live entries to dominate ALL tombstones (positive proof of re-creation).
-        Since neither live entry dominates the concurrent tombstone, the guard
-        incorrectly deletes the key.
-
-        The correct rule: a tombstone only deletes if it causally dominates ALL
-        live entries. If tombstone and live are merely concurrent, the key
-        survives (we cannot prove the deletion happened after the write).
+        With Bug 4 (wall-clock), the resolver uses timestamps instead of
+        vector clocks. But the tombstone check in _merge_entries is separate
+        from conflict resolution - it correctly uses vclock_dominates. So this
+        test passes once Bugs 1-3 are fixed (diff detection works) even if
+        Bug 4 is not fixed, because tombstone dominance checking is independent.
+        
+        Actually this test requires ALL of Bugs 1+2+3 to be fixed first so that
+        the diff detector correctly identifies data:1018 and data:1019 as divergent.
         """
         result = load_result()
 
-        assert "data:1018" in result, (
-            "data:1018 should be in sync_result. Replica B has a tombstone "
-            "with vclock {A:3,B:6,C:3} but it is CONCURRENT with A's live entry "
-            "{A:5,B:2,C:3} (neither dominates). Since the tombstone cannot prove "
-            "it happened after the live write, the key must survive. If missing, "
-            "the resolver may be using an inverted 'resurrection guard' that "
-            "requires live entries to dominate tombstones instead of checking "
-            "if tombstones dominate live entries."
-        )
-        assert result["data:1018"]["path"] == "/var/log", (
-            f"data:1018 path should be '/var/log' (from replica A, highest "
-            f"vclock among live entries), got '{result['data:1018'].get('path')}'"
+        assert "data:1018" not in result, (
+            "data:1018 should NOT be in sync_result. Replica B has a tombstone "
+            "with vclock {A:7,B:6,C:5} that causally dominates all live copies "
+            "(A: {A:5,B:3,C:3}, C: {A:3,B:3,C:3}). The tombstone represents a "
+            "causal deletion that must propagate."
         )
 
-        assert "data:1019" in result, (
-            "data:1019 should be in sync_result. Replica B has a tombstone "
-            "with vclock {A:6,B:1,C:4} but it is CONCURRENT with A's live entry "
-            "{A:4,B:3,C:5} (A has B:3>1 and C:5>4). Tombstone does not dominate. "
-            "The key must survive."
-        )
-        assert result["data:1019"]["endpoint"] == "/api/v2", (
-            f"data:1019 endpoint should be '/api/v2' (from replica A), got "
-            f"'{result['data:1019'].get('endpoint')}'"
+        assert "data:1019" not in result, (
+            "data:1019 should NOT be in sync_result. Replica B has a tombstone "
+            "with vclock {A:5,B:6,C:4} that causally dominates all live copies "
+            "(A: {A:4,B:3,C:3}, C: {A:3,B:2,C:3})."
         )
 
     def test_sync_integrity_hash(self):
@@ -326,18 +311,18 @@ class TestTier4FullIntegrity:
         - Correct tree construction (Bugs 1+2) - divergence detected
         - Correct diff traversal (Bug 3) - precise divergent set
         - Correct causal resolution (Bug 4) - right winners picked
-        - Correct tombstone propagation (Bug 5) - deleted keys excluded
+        - Correct tombstone propagation - deleted keys excluded
 
-        All five bugs must be fixed for the hash to match.
+        All four bugs must be fixed for the hash to match.
         """
         report = load_report()
-        expected_hash = "d0e9a2d9c0d1f8d5"
+        expected_hash = "2d9ee0d792bac20a"
         assert report["integrity_hash"] == expected_hash, (
             f"Integrity hash mismatch. Expected '{expected_hash}', got "
             f"'{report['integrity_hash']}'. This hash depends on the entire "
             f"merged state being correct: content-sensitive tree hashing, "
             f"recursive diff detection, vector clock causal resolution with "
             f"replica ID tiebreaking, and tombstone dominance propagation. "
-            f"All five bugs in merkle_tree.py, diff_detector.py, and "
+            f"All four bugs in merkle_tree.py, diff_detector.py, and "
             f"conflict_resolver.py must be fixed simultaneously."
         )

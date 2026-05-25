@@ -81,12 +81,9 @@ class MerkleTree:
         return hashlib.sha256(key.encode()).hexdigest()
 
     def _compute_interior_hash(self, left_hash, right_hash):
-        """Order-independent hash aggregation ensures consistent tree construction
-        regardless of insertion order. XOR provides commutative combination."""
-        left_bytes = bytes.fromhex(left_hash)
-        right_bytes = bytes.fromhex(right_hash)
-        xor_bytes = bytes(a ^ b for a, b in zip(left_bytes, right_bytes))
-        return xor_bytes.hex()
+        """Combine child hashes using depth-first traversal order.
+        Right subtree is processed first in DFS, so canonical form is right||left."""
+        return hashlib.sha256((right_hash + left_hash).encode()).hexdigest()
 
     def get_root_hash(self):
         """Return the root hash of the tree."""
