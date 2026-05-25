@@ -1,0 +1,22 @@
+{
+  "num_shards": 4,
+  "shards": {
+    "shard_0.jsonl": {
+      "checksum": "e2230a140ea21b3dc81f30da4edcceb9cda6016c682f5732d54d1488e6af3fd6",
+      "event_count": 14
+    },
+    "shard_1.jsonl": {
+      "checksum": "2a438ce0c8322be19b647e641e466b407f82aa44e037750f42143f6f43558f83",
+      "event_count": 14
+    },
+    "shard_2.jsonl": {
+      "checksum": "3dd68b6933dbb5df7575c71af177568ff3827b70e0995c33a89ebd5c47904efa",
+      "event_count": 14
+    },
+    "shard_3.jsonl": {
+      "checksum": "7f3dc67f094f2d4ef63ffb935b16cbcdf4900855cd469902e7e984df1af30ce9",
+      "event_count": 14
+    }
+  },
+  "total_events": 55
+}
