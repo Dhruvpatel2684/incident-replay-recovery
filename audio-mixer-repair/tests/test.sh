@@ -1,13 +1,22 @@
 #!/bin/bash
-# test.sh - Run the mixer pipeline and then execute validation tests
-# Expected to run inside the Docker container with /app as WORKDIR
+set -euo pipefail
 
-set -e
+mkdir -p /logs/verifier
 
 # Run the mixer to generate output
 python3 /app/runtime/mixer.py /app/runtime/mix_session.json
 
 # Run pytest validation using uv
-uv run --with pytest pytest /app/tests/test_mixer.py -v --tb=short
+set +e
+uv run --with pytest pytest /tests/test_mixer.py -v --tb=short
+TEST_EXIT=$?
+set -e
 
-echo "[test] All tests completed."
+if [ "$TEST_EXIT" -eq 0 ]; then
+    echo 1 > /logs/verifier/reward.txt
+else
+    echo 0 > /logs/verifier/reward.txt
+fi
+
+cat /logs/verifier/reward.txt
+exit "$TEST_EXIT"
