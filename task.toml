@@ -1,0 +1,26 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "devops"
+difficulty = "hard"
+tags = ["devops", "configuration-management", "drift-detection", "compliance", "python"]
+
+difficulty_explanation = "The reconciler contains 5 interacting defects across recursive comparison logic, list normalization, status propagation between data sources, compliance arithmetic, and report integrity hashing. Fixing one bug without understanding the others leads to partial failures. The coercion propagation bug requires understanding Python variable scoping in recursive functions."
+
+solution_explanation = "The repair corrects coercion propagation in nested recursion, replaces json.dumps list comparison with whitespace-normalized sorting, fixes status attribution to use manifest declarations, replaces integer floor division with float precision in overall compliance, and aligns hash computation separators with file write format."
+
+verification_explanation = "Validation checks drift detection accuracy (false positive elimination, correct drift counts), node status correctness, compliance score precision, remediation plan completeness for active nodes, and report integrity hash verification against file content."
+
+expert_time_estimate_hours = 2.5
+
+[task]
+name = "config-drift-reconciler"
+description = "Repair a configuration drift reconciler with interacting defects in recursive comparison, list normalization, status propagation, compliance scoring, and report integrity"
+
+[environment]
+dockerfile = "environment/Dockerfile"
+
+[solution]
+solve_script = "solution/solve.sh"
+
+[tests]
+test_script = "tests/test.sh"
