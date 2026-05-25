@@ -252,10 +252,10 @@
     "version": 2
   },
   "data:1018": {
-    "last_modified": "2024-01-15T09:00:00Z",
+    "last_modified": "2024-01-15T08:00:00Z",
     "tombstone": false,
     "value": {
-      "path": "/tmp/log",
+      "path": "/var/log",
       "rotate": false
     },
     "vclock": {

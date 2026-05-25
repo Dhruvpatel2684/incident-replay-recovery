@@ -172,24 +172,24 @@ class TestTier3DiffAndResolution:
     """
 
     def test_conflict_resolution_causal(self):
-        """Keys where replica A's vclock dominates must resolve to A's value.
+        """Keys where replica B's vclock dominates must resolve to B's value.
 
-        data:1012: A has vclock {A:5,B:3,C:3}, B has {A:4,B:3,C:2}.
-        A strictly dominates B. Correct resolution: A's value.
+        data:1012: B has vclock {A:5,B:3,C:3}, A has {A:4,B:3,C:2}.
+        B strictly dominates A. Correct resolution: B's value.
 
-        But B has last_modified='2024-01-15T11:45:00Z' while A has
-        '2024-01-15T09:30:00Z'. Wall-clock (Bug 4) picks B incorrectly.
+        But A has last_modified='2024-01-15T11:45:00Z' while B has
+        '2024-01-15T09:30:00Z'. Wall-clock (Bug 4) picks A incorrectly.
 
-        data:1013: A has vclock {A:6,B:4,C:4}, B has {A:5,B:4,C:3}.
-        A strictly dominates B. Correct resolution: A's value.
-        Same wall-clock trap: B's timestamp is later.
+        data:1013: B has vclock {A:6,B:4,C:4}, A has {A:5,B:4,C:3}.
+        B strictly dominates A. Correct resolution: B's value.
+        Same wall-clock trap: A's timestamp is later.
         """
         result = load_result()
 
         assert "data:1012" in result, "data:1012 must exist in sync_result"
         assert result["data:1012"]["status"] == "active", (
-            f"data:1012 status should be 'active' (from replica A, whose vclock "
-            f"{{A:5,B:3,C:3}} dominates B's {{A:4,B:3,C:2}}), got "
+            f"data:1012 status should be 'active' (from replica B, whose vclock "
+            f"{{A:5,B:3,C:3}} dominates A's {{A:4,B:3,C:2}}), got "
             f"'{result['data:1012']['status']}'. If you got 'inactive', the "
             f"resolver is using wall-clock timestamps instead of vector clock "
             f"causality. Check _resolve_conflict."
@@ -197,10 +197,10 @@ class TestTier3DiffAndResolution:
 
         assert "data:1013" in result, "data:1013 must exist in sync_result"
         assert result["data:1013"]["region"] == "us-east", (
-            f"data:1013 region should be 'us-east' (from replica A, whose vclock "
-            f"{{A:6,B:4,C:4}} dominates B's {{A:5,B:4,C:3}}), got "
-            f"'{result['data:1013']['region']}'. Wall-clock resolution picks B "
-            f"(later timestamp) instead of the causally correct A."
+            f"data:1013 region should be 'us-east' (from replica B, whose vclock "
+            f"{{A:6,B:4,C:4}} dominates A's {{A:5,B:4,C:3}}), got "
+            f"'{result['data:1013']['region']}'. Wall-clock resolution picks A "
+            f"(later timestamp) instead of the causally correct B."
         )
 
     def test_concurrent_conflict_tiebreak(self):
@@ -265,8 +265,8 @@ class TestTier4FullIntegrity:
     def test_tombstone_propagation(self):
         """Tombstoned keys with dominating vclock must not appear in result.
 
-        data:1018: A has tombstone with vclock {A:7,B:4,C:4} which dominates
-        B's live {A:5,B:4,C:3} and C's live {A:3,B:3,C:3}. Causal deletion
+        data:1018: B has tombstone with vclock {A:7,B:4,C:4} which dominates
+        A's live {A:5,B:4,C:3} and C's live {A:3,B:3,C:3}. Causal deletion
         wins - key must not be in sync_result.
 
         data:1019: B has tombstone with vclock {A:5,B:6,C:4} which dominates
@@ -278,9 +278,9 @@ class TestTier4FullIntegrity:
         result = load_result()
 
         assert "data:1018" not in result, (
-            "data:1018 should NOT be in sync_result. Replica A has a tombstone "
+            "data:1018 should NOT be in sync_result. Replica B has a tombstone "
             "with vclock {A:7,B:4,C:4} that causally dominates all live copies "
-            "(B: {A:5,B:4,C:3}, C: {A:3,B:3,C:3}). The tombstone represents a "
+            "(A: {A:5,B:4,C:3}, C: {A:3,B:3,C:3}). The tombstone represents a "
             "causal deletion that must be propagated. If this key appears, the "
             "resolver is ignoring tombstones during conflict resolution."
         )

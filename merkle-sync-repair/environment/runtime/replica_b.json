@@ -168,32 +168,32 @@
     "version": 4
   },
   "data:1012": {
-    "last_modified": "2024-01-15T11:45:00Z",
+    "last_modified": "2024-01-15T09:30:00Z",
     "tombstone": false,
     "value": {
-      "priority": "low",
-      "status": "inactive"
-    },
-    "vclock": {
-      "A": 4,
-      "B": 3,
-      "C": 2
-    },
-    "version": 6
-  },
-  "data:1013": {
-    "last_modified": "2024-01-15T12:30:00Z",
-    "tombstone": false,
-    "value": {
-      "region": "eu-west",
-      "replicas": 2
+      "priority": "high",
+      "status": "active"
     },
     "vclock": {
       "A": 5,
-      "B": 4,
+      "B": 3,
       "C": 3
     },
-    "version": 9
+    "version": 8
+  },
+  "data:1013": {
+    "last_modified": "2024-01-15T08:15:00Z",
+    "tombstone": false,
+    "value": {
+      "region": "us-east",
+      "replicas": 3
+    },
+    "vclock": {
+      "A": 6,
+      "B": 4,
+      "C": 4
+    },
+    "version": 10
   },
   "data:1014": {
     "last_modified": "2024-01-15T11:00:00Z",
@@ -252,18 +252,15 @@
     "version": 6
   },
   "data:1018": {
-    "last_modified": "2024-01-15T11:00:00Z",
-    "tombstone": false,
-    "value": {
-      "path": "/var/log",
-      "rotate": true
-    },
+    "last_modified": "2024-01-15T14:00:00Z",
+    "tombstone": true,
+    "value": null,
     "vclock": {
-      "A": 5,
+      "A": 7,
       "B": 4,
-      "C": 3
+      "C": 4
     },
-    "version": 9
+    "version": 12
   },
   "data:1019": {
     "last_modified": "2024-01-15T13:00:00Z",
