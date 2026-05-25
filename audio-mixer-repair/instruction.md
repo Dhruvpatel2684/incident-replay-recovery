@@ -50,6 +50,8 @@ The `mix_session.json` defines 6 channels with:
 - `mix_output.json`: Stereo sample arrays, per-channel RMS, peak value
 - `mix_stats.json`: Output RMS (L/R), dynamic range, clipped count, checksum
 
+Both output files are written to `/app/runtime/` alongside the input files.
+
 ## Constraints
 - Python 3 standard library only (math, json, hashlib, struct)
 - 16-bit signed audio: valid sample range is [-32768, 32767]
