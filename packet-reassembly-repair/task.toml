@@ -1,0 +1,13 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "networking"
+difficulty = "hard"
+tags = ["tcp", "packet-reassembly", "networking", "stream-reconstruction", "overlap-detection", "debugging"]
+difficulty_explanation = "Requires understanding TCP sequence number arithmetic, byte-level stream reassembly with overlapping segments, off-by-one boundary semantics, and checksum computation. Four interacting bugs span stream buffer management, overlap detection, and checksum validation."
+solution_explanation = "The oracle re-processes the capture log with correct 0-based sequence offsets, exclusive-end arithmetic for next expected seq, standard overlap intersection check, and direct CRC32 without byte reversal."
+verification_explanation = "14 tests in 4 tiers: structural checks pass with buggy code, stream content tests need Bugs 1-2 fixed, overlap tests need Bug 3 fixed, and checksum/gap tests need all bugs fixed simultaneously."
+expert_time_estimate_hours = 2.5
+
+[task]
+name = "packet-reassembly-repair"
+description = "Debug a broken network packet reassembly engine that incorrectly reconstructs byte streams from fragmented segments due to bugs in sequence number arithmetic, overlap detection, and checksum computation."
