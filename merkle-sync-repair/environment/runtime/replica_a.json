@@ -1,0 +1,304 @@
+{
+  "data:1000": {
+    "last_modified": "2024-01-15T10:00:00Z",
+    "tombstone": false,
+    "value": {
+      "name": "item_0",
+      "score": 10
+    },
+    "vclock": {
+      "A": 2,
+      "B": 2,
+      "C": 2
+    },
+    "version": 4
+  },
+  "data:1001": {
+    "last_modified": "2024-01-15T10:00:00Z",
+    "tombstone": false,
+    "value": {
+      "name": "item_1",
+      "score": 20
+    },
+    "vclock": {
+      "A": 2,
+      "B": 2,
+      "C": 2
+    },
+    "version": 4
+  },
+  "data:1002": {
+    "last_modified": "2024-01-15T10:00:00Z",
+    "tombstone": false,
+    "value": {
+      "name": "item_2",
+      "score": 30
+    },
+    "vclock": {
+      "A": 2,
+      "B": 2,
+      "C": 2
+    },
+    "version": 4
+  },
+  "data:1003": {
+    "last_modified": "2024-01-15T10:00:00Z",
+    "tombstone": false,
+    "value": {
+      "name": "item_3",
+      "score": 40
+    },
+    "vclock": {
+      "A": 2,
+      "B": 2,
+      "C": 2
+    },
+    "version": 4
+  },
+  "data:1004": {
+    "last_modified": "2024-01-15T10:00:00Z",
+    "tombstone": false,
+    "value": {
+      "name": "item_4",
+      "score": 50
+    },
+    "vclock": {
+      "A": 2,
+      "B": 2,
+      "C": 2
+    },
+    "version": 4
+  },
+  "data:1005": {
+    "last_modified": "2024-01-15T10:00:00Z",
+    "tombstone": false,
+    "value": {
+      "name": "item_5",
+      "score": 60
+    },
+    "vclock": {
+      "A": 2,
+      "B": 2,
+      "C": 2
+    },
+    "version": 4
+  },
+  "data:1006": {
+    "last_modified": "2024-01-15T10:00:00Z",
+    "tombstone": false,
+    "value": {
+      "name": "item_6",
+      "score": 70
+    },
+    "vclock": {
+      "A": 2,
+      "B": 2,
+      "C": 2
+    },
+    "version": 4
+  },
+  "data:1007": {
+    "last_modified": "2024-01-15T10:00:00Z",
+    "tombstone": false,
+    "value": {
+      "name": "item_7",
+      "score": 80
+    },
+    "vclock": {
+      "A": 2,
+      "B": 2,
+      "C": 2
+    },
+    "version": 4
+  },
+  "data:1008": {
+    "last_modified": "2024-01-15T10:00:00Z",
+    "tombstone": false,
+    "value": {
+      "name": "item_8",
+      "score": 90
+    },
+    "vclock": {
+      "A": 2,
+      "B": 2,
+      "C": 2
+    },
+    "version": 4
+  },
+  "data:1009": {
+    "last_modified": "2024-01-15T10:00:00Z",
+    "tombstone": false,
+    "value": {
+      "name": "item_9",
+      "score": 100
+    },
+    "vclock": {
+      "A": 2,
+      "B": 2,
+      "C": 2
+    },
+    "version": 4
+  },
+  "data:1010": {
+    "last_modified": "2024-01-15T10:00:00Z",
+    "tombstone": false,
+    "value": {
+      "name": "item_10",
+      "score": 110
+    },
+    "vclock": {
+      "A": 2,
+      "B": 2,
+      "C": 2
+    },
+    "version": 4
+  },
+  "data:1011": {
+    "last_modified": "2024-01-15T10:00:00Z",
+    "tombstone": false,
+    "value": {
+      "name": "item_11",
+      "score": 120
+    },
+    "vclock": {
+      "A": 2,
+      "B": 2,
+      "C": 2
+    },
+    "version": 4
+  },
+  "data:1012": {
+    "last_modified": "2024-01-15T09:30:00Z",
+    "tombstone": false,
+    "value": {
+      "priority": "high",
+      "status": "active"
+    },
+    "vclock": {
+      "A": 5,
+      "B": 3,
+      "C": 3
+    },
+    "version": 8
+  },
+  "data:1013": {
+    "last_modified": "2024-01-15T08:15:00Z",
+    "tombstone": false,
+    "value": {
+      "region": "us-east",
+      "replicas": 3
+    },
+    "vclock": {
+      "A": 6,
+      "B": 4,
+      "C": 4
+    },
+    "version": 10
+  },
+  "data:1014": {
+    "last_modified": "2024-01-15T09:00:00Z",
+    "tombstone": false,
+    "value": {
+      "ttl": 300,
+      "type": "cache"
+    },
+    "vclock": {
+      "A": 3,
+      "B": 2,
+      "C": 2
+    },
+    "version": 5
+  },
+  "data:1015": {
+    "last_modified": "2024-01-15T09:30:00Z",
+    "tombstone": false,
+    "value": {
+      "count": 42,
+      "label": "alpha"
+    },
+    "vclock": {
+      "A": 4,
+      "B": 3,
+      "C": 3
+    },
+    "version": 7
+  },
+  "data:1016": {
+    "last_modified": "2024-01-15T10:10:00Z",
+    "tombstone": false,
+    "value": {
+      "buffer": 1024,
+      "mode": "stream"
+    },
+    "vclock": {
+      "A": 4,
+      "B": 1,
+      "C": 2
+    },
+    "version": 5
+  },
+  "data:1017": {
+    "last_modified": "2024-01-15T10:40:00Z",
+    "tombstone": false,
+    "value": {
+      "level": "warn",
+      "target": "syslog"
+    },
+    "vclock": {
+      "A": 5,
+      "B": 2,
+      "C": 1
+    },
+    "version": 6
+  },
+  "data:1018": {
+    "last_modified": "2024-01-15T14:00:00Z",
+    "tombstone": true,
+    "value": null,
+    "vclock": {
+      "A": 7,
+      "B": 4,
+      "C": 4
+    },
+    "version": 12
+  },
+  "data:1019": {
+    "last_modified": "2024-01-15T10:00:00Z",
+    "tombstone": false,
+    "value": {
+      "endpoint": "/api/v2",
+      "timeout": 30
+    },
+    "vclock": {
+      "A": 4,
+      "B": 3,
+      "C": 3
+    },
+    "version": 7
+  },
+  "data:1020": {
+    "last_modified": "2024-01-15T13:00:00Z",
+    "tombstone": false,
+    "value": {
+      "metric": "cpu_usage",
+      "threshold": 0.85
+    },
+    "vclock": {
+      "A": 3,
+      "B": 0,
+      "C": 0
+    },
+    "version": 3
+  },
+  "data:1021": {
+    "last_modified": "2024-01-15T06:00:00Z",
+    "tombstone": true,
+    "value": null,
+    "vclock": {
+      "A": 0,
+      "B": 0,
+      "C": 0
+    },
+    "version": 0
+  }
+}
