@@ -3,10 +3,10 @@
 
 This script restores full integrity by:
 1. Reading source files to recompute correct blob hashes
-2. Rebuilding tree objects with correct references
-3. Rebuilding commit objects with correct tree/parent hashes
-4. Fixing HEAD reference
-5. Fixing the index
+2. Identifying the historical blob (old main.py from commit 1)
+3. Rebuilding tree objects with correct references
+4. Rebuilding commit objects with correct tree/parent hashes
+5. Fixing HEAD reference and index
 """
 
 import hashlib
@@ -76,6 +76,24 @@ def classify_object(content):
     return "blob"
 
 
+def find_old_main_py():
+    """Find the historical main.py blob in the store.
+    
+    The old main.py is identifiable because it's a Python file that:
+    - Contains 'Main application entry point' (it's a version of main.py)
+    - Does NOT import from lib.helper (that was added in commit 2)
+    """
+    for obj_name in os.listdir(OBJECTS_DIR):
+        obj_path = os.path.join(OBJECTS_DIR, obj_name)
+        with open(obj_path) as f:
+            content = f.read()
+        if classify_object(content) != "blob":
+            continue
+        if "Main application entry point" in content and "from lib.helper" not in content:
+            return content
+    return None
+
+
 def main():
     os.makedirs(OBJECTS_DIR, exist_ok=True)
     os.makedirs(REFS_DIR, exist_ok=True)
@@ -95,55 +113,25 @@ def main():
     for path, content in source_files.items():
         blob_hashes[path] = compute_blob_hash(content)
 
-    # Step 2: Remove all existing objects and rebuild from scratch
-    # First, find any existing commit objects to extract metadata
-    existing_commits = []
-    for obj_name in os.listdir(OBJECTS_DIR):
-        obj_path = os.path.join(OBJECTS_DIR, obj_name)
-        with open(obj_path) as f:
-            content = f.read()
-        if classify_object(content) == "commit":
-            existing_commits.append(content)
+    # Step 2: Find the old main.py blob (from commit 1) before clearing
+    old_main_content = find_old_main_py()
 
-    # Find the initial commit (one without parent) and extract its tree info
-    # We need to preserve commit 1's tree (old version of main.py)
-    initial_commit_content = None
-    latest_commit_content = None
-    for content in existing_commits:
-        if "parent " not in content.split("\n\n")[0]:
-            initial_commit_content = content
-        else:
-            latest_commit_content = content
-
-    # Step 3: Find old blobs that need to be preserved (from commit 1)
-    # The old main.py can be found by looking for blob objects that aren't
-    # our current source files
-    old_blobs = {}
-    current_blob_contents = set(source_files.values())
-    for obj_name in os.listdir(OBJECTS_DIR):
-        obj_path = os.path.join(OBJECTS_DIR, obj_name)
-        with open(obj_path) as f:
-            content = f.read()
-        obj_type = classify_object(content)
-        if obj_type == "blob" and content not in current_blob_contents:
-            # This is a historical blob - verify its hash
-            correct_hash = compute_blob_hash(content)
-            old_blobs[correct_hash] = content
-
-    # Step 4: Clear all objects
+    # Step 3: Clear all objects
     for f_name in os.listdir(OBJECTS_DIR):
         os.remove(os.path.join(OBJECTS_DIR, f_name))
 
-    # Step 5: Write all current blobs with correct hashes
+    # Step 4: Write all current blobs with correct hashes
     for path, content in source_files.items():
         correct_hash = blob_hashes[path]
         with open(os.path.join(OBJECTS_DIR, correct_hash), "w") as f:
             f.write(content)
 
-    # Write old blobs
-    for obj_hash, content in old_blobs.items():
-        with open(os.path.join(OBJECTS_DIR, obj_hash), "w") as f:
-            f.write(content)
+    # Step 5: Write old main.py blob (if found)
+    old_main_hash = None
+    if old_main_content:
+        old_main_hash = compute_blob_hash(old_main_content)
+        with open(os.path.join(OBJECTS_DIR, old_main_hash), "w") as f:
+            f.write(old_main_content)
 
     # Step 6: Build lib/ subtree
     lib_entries = [
@@ -169,8 +157,7 @@ def main():
         f.write(root_tree_content)
 
     # Step 8: Build old root tree (for commit 1, using old main.py)
-    if old_blobs:
-        old_main_hash = list(old_blobs.keys())[0]  # The only old blob
+    if old_main_hash:
         old_root_entries = [
             ("100644", blob_hashes["README.md"], "README.md"),
             ("100644", blob_hashes["config.json"], "config.json"),
@@ -209,8 +196,8 @@ def main():
         json.dump(index_data, f, indent=2)
 
     print("Store repair complete.")
-    print(f"  Blobs: {len(source_files) + len(old_blobs)}")
-    print(f"  Trees: 2 (lib + root)" + (" + 1 old root" if old_blobs else ""))
+    print(f"  Blobs: {len(source_files) + (1 if old_main_hash else 0)}")
+    print(f"  Trees: 2 (lib + root)" + (" + 1 old root" if old_main_hash else ""))
     print(f"  Commits: 2 (initial + latest)")
     print(f"  HEAD -> {commit2_hash}")
     print(f"  Index entries: {len(index_data)}")
