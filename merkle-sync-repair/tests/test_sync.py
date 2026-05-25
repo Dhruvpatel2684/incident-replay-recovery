@@ -102,7 +102,7 @@ class TestTier2TreeConstruction:
         """At least 10 divergent keys must be detected.
 
         The replica data has exactly 10 keys that differ across replicas:
-        4 with causal dominance, 2 concurrent, 2 tombstone conflicts,
+        6 with causal dominance, 2 tombstone-concurrent conflicts,
         and 2 that exist on only one replica (live vs tombstone).
 
         With Bug 1 (key-only hashing), trees look identical and
@@ -203,30 +203,36 @@ class TestTier3DiffAndResolution:
             f"(later timestamp) instead of the causally correct B."
         )
 
-    def test_concurrent_conflict_tiebreak(self):
-        """Concurrent conflicts must use deterministic tiebreak by replica ID.
+    def test_additional_causal_resolution(self):
+        """Additional keys where replica B's vclock dominates must resolve to B.
 
-        data:1016: A has vclock {A:4,B:1,C:2}, B has {A:1,B:4,C:2}.
-        Neither dominates the other (concurrent). Tiebreak: lower replica
-        ID wins for consistency (alphabetical first). A < B, so A's value wins.
+        data:1016: B has vclock {A:4,B:5,C:3}, A has {A:3,B:2,C:2}.
+        B strictly dominates A. Correct resolution: B's value (mode='batch').
 
-        data:1017: A has vclock {A:5,B:2,C:1}, B has {A:2,B:5,C:1}.
-        Concurrent. A < B, so A wins.
+        But A has last_modified='2024-01-15T11:30:00Z' while B has
+        '2024-01-15T09:15:00Z'. Wall-clock (Bug 4) picks A incorrectly.
+
+        data:1017: B has vclock {A:4,B:5,C:2}, A has {A:3,B:2,C:1}.
+        B strictly dominates A. Correct resolution: B's value (level='error').
+        Same wall-clock trap: A's timestamp is later.
         """
         result = load_result()
 
         assert "data:1016" in result, "data:1016 must exist in sync_result"
-        assert result["data:1016"]["mode"] == "stream", (
-            f"data:1016 mode should be 'stream' (from replica A, concurrent "
-            f"conflict tiebreak by replica ID: A < B), got "
-            f"'{result['data:1016']['mode']}'"
+        assert result["data:1016"]["mode"] == "batch", (
+            f"data:1016 mode should be 'batch' (from replica B, whose vclock "
+            f"{{A:4,B:5,C:3}} dominates A's {{A:3,B:2,C:2}}), got "
+            f"'{result['data:1016']['mode']}'. If you got 'stream', the "
+            f"resolver is using wall-clock timestamps instead of vector clock "
+            f"causality."
         )
 
         assert "data:1017" in result, "data:1017 must exist in sync_result"
-        assert result["data:1017"]["level"] == "warn", (
-            f"data:1017 level should be 'warn' (from replica A, concurrent "
-            f"conflict tiebreak by replica ID: A < B), got "
-            f"'{result['data:1017']['level']}'"
+        assert result["data:1017"]["level"] == "error", (
+            f"data:1017 level should be 'error' (from replica B, whose vclock "
+            f"{{A:4,B:5,C:2}} dominates A's {{A:3,B:2,C:1}}), got "
+            f"'{result['data:1017']['level']}'. Wall-clock resolution picks A "
+            f"(later timestamp) instead of the causally correct B."
         )
 
     def test_diff_precision(self):
@@ -257,39 +263,59 @@ class TestTier3DiffAndResolution:
 class TestTier4FullIntegrity:
     """Tests that require all bugs to be fixed simultaneously.
 
-    Bug 5 treats tombstones as replica-local, ignoring them during
-    conflict resolution. Keys where a tombstone's vclock causally
-    dominates all live entries should be deleted from the merged state.
+    Bug 5 uses a 'resurrection guard' pattern that inverts the correct
+    tombstone check. Instead of asking "does the tombstone dominate all
+    live entries?" it asks "does any live entry dominate the tombstone?"
+    When tombstones are concurrent with live entries (neither dominates),
+    the guard incorrectly kills the key.
     """
 
     def test_tombstone_propagation(self):
-        """Tombstoned keys with dominating vclock must not appear in result.
+        """Concurrent tombstones must NOT delete keys from result.
 
-        data:1018: B has tombstone with vclock {A:7,B:4,C:4} which dominates
-        A's live {A:5,B:4,C:3} and C's live {A:3,B:3,C:3}. Causal deletion
-        wins - key must not be in sync_result.
+        data:1018: B has tombstone with vclock {A:3,B:6,C:3}, A has live with
+        vclock {A:5,B:2,C:3}. These are CONCURRENT (A has A:5>3, B has B:6>2).
+        Since the tombstone does NOT causally dominate the live entry, the key
+        must remain alive. A's value wins among live entries.
 
-        data:1019: B has tombstone with vclock {A:5,B:6,C:4} which dominates
-        A's live {A:4,B:3,C:3} and C's live {A:3,B:2,C:3}. Same logic.
+        data:1019: B has tombstone with vclock {A:6,B:1,C:4}, A has live with
+        vclock {A:4,B:3,C:5}. CONCURRENT (B has A:6>4, A has B:3>1 and C:5>4).
+        Tombstone does NOT dominate. Key stays alive.
 
-        Bug 5 filters out tombstones before resolution, so only live entries
-        compete. The tombstone's causal dominance is ignored.
+        Bug 5 uses a 'resurrection guard' that inverts the check: it requires
+        live entries to dominate ALL tombstones (positive proof of re-creation).
+        Since neither live entry dominates the concurrent tombstone, the guard
+        incorrectly deletes the key.
+
+        The correct rule: a tombstone only deletes if it causally dominates ALL
+        live entries. If tombstone and live are merely concurrent, the key
+        survives (we cannot prove the deletion happened after the write).
         """
         result = load_result()
 
-        assert "data:1018" not in result, (
-            "data:1018 should NOT be in sync_result. Replica B has a tombstone "
-            "with vclock {A:7,B:4,C:4} that causally dominates all live copies "
-            "(A: {A:5,B:4,C:3}, C: {A:3,B:3,C:3}). The tombstone represents a "
-            "causal deletion that must be propagated. If this key appears, the "
-            "resolver is ignoring tombstones during conflict resolution."
+        assert "data:1018" in result, (
+            "data:1018 should be in sync_result. Replica B has a tombstone "
+            "with vclock {A:3,B:6,C:3} but it is CONCURRENT with A's live entry "
+            "{A:5,B:2,C:3} (neither dominates). Since the tombstone cannot prove "
+            "it happened after the live write, the key must survive. If missing, "
+            "the resolver may be using an inverted 'resurrection guard' that "
+            "requires live entries to dominate tombstones instead of checking "
+            "if tombstones dominate live entries."
+        )
+        assert result["data:1018"]["path"] == "/var/log", (
+            f"data:1018 path should be '/var/log' (from replica A, highest "
+            f"vclock among live entries), got '{result['data:1018'].get('path')}'"
         )
 
-        assert "data:1019" not in result, (
-            "data:1019 should NOT be in sync_result. Replica B has a tombstone "
-            "with vclock {A:5,B:6,C:4} that causally dominates all live copies "
-            "(A: {A:4,B:3,C:3}, C: {A:3,B:2,C:3}). Bug 5 treats tombstones as "
-            "replica-local and filters them out before resolution."
+        assert "data:1019" in result, (
+            "data:1019 should be in sync_result. Replica B has a tombstone "
+            "with vclock {A:6,B:1,C:4} but it is CONCURRENT with A's live entry "
+            "{A:4,B:3,C:5} (A has B:3>1 and C:5>4). Tombstone does not dominate. "
+            "The key must survive."
+        )
+        assert result["data:1019"]["endpoint"] == "/api/v2", (
+            f"data:1019 endpoint should be '/api/v2' (from replica A), got "
+            f"'{result['data:1019'].get('endpoint')}'"
         )
 
     def test_sync_integrity_hash(self):
@@ -305,7 +331,7 @@ class TestTier4FullIntegrity:
         All five bugs must be fixed for the hash to match.
         """
         report = load_report()
-        expected_hash = "f12a9597d106ca2e"
+        expected_hash = "d0e9a2d9c0d1f8d5"
         assert report["integrity_hash"] == expected_hash, (
             f"Integrity hash mismatch. Expected '{expected_hash}', got "
             f"'{report['integrity_hash']}'. This hash depends on the entire "

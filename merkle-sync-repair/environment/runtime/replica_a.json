@@ -224,32 +224,32 @@
     "version": 7
   },
   "data:1016": {
-    "last_modified": "2024-01-15T10:10:00Z",
+    "last_modified": "2024-01-15T11:30:00Z",
     "tombstone": false,
     "value": {
       "buffer": 1024,
       "mode": "stream"
     },
     "vclock": {
-      "A": 4,
-      "B": 1,
+      "A": 3,
+      "B": 2,
       "C": 2
     },
     "version": 5
   },
   "data:1017": {
-    "last_modified": "2024-01-15T10:40:00Z",
+    "last_modified": "2024-01-15T11:45:00Z",
     "tombstone": false,
     "value": {
       "level": "warn",
       "target": "syslog"
     },
     "vclock": {
-      "A": 5,
+      "A": 3,
       "B": 2,
       "C": 1
     },
-    "version": 6
+    "version": 4
   },
   "data:1018": {
     "last_modified": "2024-01-15T11:00:00Z",
@@ -260,10 +260,10 @@
     },
     "vclock": {
       "A": 5,
-      "B": 4,
+      "B": 2,
       "C": 3
     },
-    "version": 9
+    "version": 8
   },
   "data:1019": {
     "last_modified": "2024-01-15T10:00:00Z",
@@ -275,9 +275,9 @@
     "vclock": {
       "A": 4,
       "B": 3,
-      "C": 3
+      "C": 5
     },
-    "version": 7
+    "version": 9
   },
   "data:1020": {
     "last_modified": "2024-01-15T13:00:00Z",

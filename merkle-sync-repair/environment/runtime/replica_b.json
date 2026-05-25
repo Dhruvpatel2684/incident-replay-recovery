@@ -224,54 +224,54 @@
     "version": 11
   },
   "data:1016": {
-    "last_modified": "2024-01-15T10:05:00Z",
+    "last_modified": "2024-01-15T09:15:00Z",
     "tombstone": false,
     "value": {
       "buffer": 2048,
       "mode": "batch"
     },
     "vclock": {
-      "A": 1,
-      "B": 4,
-      "C": 2
+      "A": 4,
+      "B": 5,
+      "C": 3
     },
-    "version": 5
+    "version": 9
   },
   "data:1017": {
-    "last_modified": "2024-01-15T10:35:00Z",
+    "last_modified": "2024-01-15T09:20:00Z",
     "tombstone": false,
     "value": {
       "level": "error",
       "target": "file"
     },
     "vclock": {
-      "A": 2,
+      "A": 4,
       "B": 5,
-      "C": 1
+      "C": 2
     },
-    "version": 6
+    "version": 8
   },
   "data:1018": {
     "last_modified": "2024-01-15T14:00:00Z",
     "tombstone": true,
     "value": null,
     "vclock": {
-      "A": 7,
-      "B": 4,
-      "C": 4
+      "A": 3,
+      "B": 6,
+      "C": 3
     },
-    "version": 12
+    "version": 9
   },
   "data:1019": {
     "last_modified": "2024-01-15T13:00:00Z",
     "tombstone": true,
     "value": null,
     "vclock": {
-      "A": 5,
-      "B": 6,
+      "A": 6,
+      "B": 1,
       "C": 4
     },
-    "version": 11
+    "version": 8
   },
   "data:1020": {
     "last_modified": "2024-01-15T06:00:00Z",
