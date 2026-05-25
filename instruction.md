@@ -25,7 +25,7 @@ Honestly there are a bunch of things wrong and they seem related:
 
 - **Split vote detection broken** — there's clearly a failed election in the log (term 3, only got 1 vote) but split_votes shows 0. Something wrong with how quorum is calculated maybe?
 
-- **Nodes have different log lengths** — they shouldn't. Every append in the log gets ACK'd by all nodes, so they should all converge to the same state. Instead we see different log_length values and NULL gaps where entries should be. The log uses 1-based indexing with a NULL sentinel at position 0, but some nodes seem to be writing entries at the wrong positions.
+- **Nodes have different log lengths** — they shouldn't. Every append in the log gets ACK'd by all nodes, so they should all converge to the same state. Instead we see different log_length values and NULL gaps where entries should be.
 
 - **The hash is wrong** — consistency_hash gives different results between runs. The iteration over nodes isn't deterministic. Also even when we manually verify the node ordering, the hash still doesn't match what we expect, so something else feeding into it is wrong too.
 
@@ -37,30 +37,22 @@ Honestly there are a bunch of things wrong and they seem related:
 
 The replayer produces two files in `/app/runtime/`:
 
-**`cluster_state.jsonl`** — one JSON record per line (sorted by node_id):
-```json
-{
-  "node_id": "node-1",
-  "term": 4,
-  "role": "follower",
-  "log_length": 8,
-  "commit_index": 6,
-  "committed_entries": ["NULL", "term1:SET:x=1", "..."],
-  "leader_id": "node-3"
-}
-```
+**`cluster_state.jsonl`** — one JSON record per line (sorted by node_id), each with these fields:
+- `node_id` (string): the node identifier
+- `term` (int): final election term for this node
+- `role` (string): "leader" or "follower"
+- `log_length` (int): total entries in this node's replicated log
+- `commit_index` (int): index of last committed entry
+- `committed_entries` (array of strings): serialized log entries through commit_index, formatted as "termN:OPERATION" or "NULL" for empty sentinel slots
+- `leader_id` (string): node_id of the current leader
 
-**`integrity.json`** — summary statistics:
-```json
-{
-  "total_commits": 6,
-  "leader_elections": 3,
-  "split_votes": 1,
-  "consistency_hash": "<16-char hex string>",
-  "total_events_processed": 24,
-  "final_term": 4
-}
-```
+**`integrity.json`** — summary statistics with these fields:
+- `total_commits` (int): number of COMMIT events processed
+- `leader_elections` (int): number of successful elections
+- `split_votes` (int): elections that failed due to insufficient votes
+- `consistency_hash` (string): 16-char hex SHA-256 prefix computed from per-node state
+- `total_events_processed` (int): sum of all nodes' log_length values
+- `final_term` (int): highest term reached by any node
 
 ## How to run
 
