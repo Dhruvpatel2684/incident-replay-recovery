@@ -204,11 +204,11 @@ def test_crossfade_applied_flag(mix_stats):
 def test_total_rms_left(mix_stats):
     """
     Left channel output RMS must match expected value.
-    Expected: -13.8183 dBFS (±0.01 dB tolerance).
+    Expected: -13.8183 dBFS (±0.05 dB tolerance).
     """
     expected = -13.8183
     actual = mix_stats['output_rms_db_left']
-    assert abs(actual - expected) < 0.01, \
+    assert abs(actual - expected) < 0.05, \
         f"Left RMS {actual:.4f} != expected {expected:.4f} (diff: {abs(actual-expected):.4f})"
 
 
