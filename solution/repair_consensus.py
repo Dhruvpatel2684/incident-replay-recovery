@@ -11,6 +11,10 @@ Fixes applied:
 5. state_machine.py Bug 5: Use prev_log_idx+1 for follower log index
 6. output_formatter.py Bug 6: Sort nodes in consistency hash computation
 7. output_formatter.py Bug 7: Correct quorum calculation (n//2 + 1)
+8. state_machine.py Trap 1: Use log[:commit_index + 1] for committed_entries (inclusive)
+9. state_machine.py Trap 2: Propagate commit_index to ALL nodes, not just leader
+10. output_formatter.py Trap 3: Include len(committed_entries) in hash formula
+11. state_machine.py Trap 4: Prevent leader double-append in term 4
 """
 
 import json
@@ -105,6 +109,9 @@ class NodeState:
         self.leader_id = None
 
     def to_dict(self):
+        # FIX for Trap 1: Use commit_index + 1 (inclusive upper bound)
+        # The committed entries include the entry AT commit_index, so we
+        # need log[:commit_index + 1] not log[:commit_index]
         return {
             "node_id": self.node_id,
             "term": self.term,
@@ -225,13 +232,21 @@ class ClusterStateMachine:
         elif new_idx < len(target_node.log):
             target_node.log[new_idx] = (term, entry)
 
-        # Also append to leader's own log
+        # FIX for Trap 4: Only append to leader if the entry doesn't already
+        # exist at the expected position. Use strict equality check to prevent
+        # double-appends from the second APPEND_ENTRY message in the same batch.
         if leader in self.nodes:
             leader_node = self.nodes[leader]
-            if prev_log_idx == len(leader_node.log) - 1 or len(leader_node.log) <= prev_log_idx:
+            expected_new_idx = prev_log_idx + 1
+            if len(leader_node.log) <= prev_log_idx:
+                # Leader log is behind - pad and append
                 while len(leader_node.log) <= prev_log_idx:
                     leader_node.log.append(None)
                 leader_node.log.append((term, entry))
+            elif len(leader_node.log) == expected_new_idx:
+                # Leader log is exactly at the right spot - append
+                leader_node.log.append((term, entry))
+            # If len > expected_new_idx, entry already exists - do nothing
 
     def _handle_append_ack(self, event):
         pass
@@ -241,10 +256,11 @@ class ClusterStateMachine:
         commit_idx = int(event["payload"].get("commit_idx", 0))
 
         # FIX for Bug 4: Count exactly ONE commit per COMMIT event
-        # (a COMMIT event means one entry achieved quorum cluster-wide)
         self.total_commits += 1
 
-        # Advance all nodes' commit index
+        # FIX for Trap 2: Advance ALL nodes' commit index, not just leader.
+        # In a correctly functioning cluster, all nodes that have replicated
+        # the entry will advance their commit_index when the leader commits.
         for nid, node in self.nodes.items():
             node.commit_index = commit_idx
 
@@ -260,12 +276,16 @@ class ClusterStateMachine:
 # ============================================================
 
 def compute_consistency_hash(cluster_state):
-    """FIX for Bug 6: Sort nodes for deterministic hash."""
+    """
+    FIX for Bug 6: Sort nodes for deterministic hash.
+    FIX for Trap 3: Include len(committed_entries) in the hash formula.
+    """
     hash_input = ""
     for node_id in sorted(cluster_state.keys()):  # FIX: sorted iteration
         state = cluster_state[node_id]
         hash_input += f"{node_id}:{state['term']}:{state['role']}:"
-        hash_input += f"{state['log_length']}:{state['commit_index']}|"
+        hash_input += f"{state['log_length']}:{state['commit_index']}:"
+        hash_input += f"{len(state['committed_entries'])}|"
 
     return hashlib.sha256(hash_input.encode()).hexdigest()[:16]
 

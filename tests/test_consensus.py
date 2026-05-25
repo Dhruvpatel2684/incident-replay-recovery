@@ -61,13 +61,15 @@ def test_split_vote_detection():
 def test_consistency_hash_deterministic():
     """
     The consistency_hash must be computed from nodes in sorted order
-    (node-1, node-2, node-3) with correct state values. This ensures
-    deterministic output regardless of internal dict ordering.
-    Expected hash: 066bdf57a78828c6
+    (node-1, node-2, node-3) with correct state values. The hash formula
+    includes node_id, term, role, log_length, commit_index, and the count
+    of committed_entries for each node. This ensures deterministic output
+    regardless of internal dict ordering.
+    Expected hash: c767f2c76fbddae8
     """
     integrity = load_integrity()
-    assert integrity["consistency_hash"] == "066bdf57a78828c6", (
-        f"Expected consistency_hash='066bdf57a78828c6', "
+    assert integrity["consistency_hash"] == "c767f2c76fbddae8", (
+        f"Expected consistency_hash='c767f2c76fbddae8', "
         f"got '{integrity['consistency_hash']}'"
     )
 

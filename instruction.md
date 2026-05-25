@@ -62,11 +62,11 @@ The operations team reports these issues when running the replayer:
 
 3. **Inconsistent node logs**: When the system is working correctly, all three nodes should end up with identical log contents and lengths (since all appends are acknowledged successfully). Instead, nodes show different `log_length` values and some have `NULL` entries where real data should be.
 
-4. **Non-deterministic hash**: The `consistency_hash` changes between runs on different Python implementations, suggesting the computation depends on iteration order rather than a canonical ordering.
+4. **Non-deterministic hash**: The `consistency_hash` changes between runs on different Python implementations, suggesting the computation depends on iteration order rather than a canonical ordering. The hash formula includes several per-node fields including the count of committed entries.
 
-5. **Incorrect committed entries**: The `committed_entries` arrays should contain only entries that have been committed (i.e., entries for which a COMMIT event exists in the log). Some nodes show `NULL` gaps and wrong entries in their committed_entries arrays.
+5. **Incorrect committed entries**: The `committed_entries` arrays should contain all entries that have been committed (i.e., entries up to and including the commit_index position). However, nodes report different `committed_entries` lengths, and some show far fewer committed entries than expected. The committed set should be consistent across all nodes since every append was acknowledged.
 
-6. **Wrong total events**: The `total_events_processed` (sum of log lengths) is 22 when it should be 24 (8 entries × 3 nodes = 24 for a fully-replicated log).
+6. **Wrong total events**: The `total_events_processed` (sum of log lengths) is wrong — it should be 24 (8 entries × 3 nodes = 24 for a fully-replicated log). The leader node shows an extra entry that shouldn't be there.
 
 ## Correct Expected Values
 
@@ -75,7 +75,7 @@ When functioning correctly, the system should produce:
 - `total_commits`: **6**
 - `leader_elections`: **3**
 - `split_votes`: **1**
-- `consistency_hash`: **`066bdf57a78828c6`**
+- `consistency_hash`: **`c767f2c76fbddae8`**
 - `total_events_processed`: **24**
 - `final_term`: **4**
 - All three nodes should have `log_length`: **8** and `commit_index`: **6**

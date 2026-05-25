@@ -19,13 +19,14 @@ class NodeState:
         self.leader_id = None
 
     def to_dict(self):
+        """Serialize node state. committed_entries are log entries up to commit_index."""
         return {
             "node_id": self.node_id,
             "term": self.term,
             "role": self.role,
             "log_length": len(self.log),
             "commit_index": self.commit_index,
-            "committed_entries": self.log[:self.commit_index + 1],
+            "committed_entries": self.log[:self.commit_index],
             "leader_id": self.leader_id,
         }
 
@@ -64,8 +65,6 @@ class ClusterStateMachine:
 
     def _handle_vote_request(self, event):
         """Candidate requests votes from peers."""
-        # Uses the term from the parsed event (BUG 1 interaction: this term
-        # may be wrong for VOTE_REQUEST events due to parser bug)
         candidate = event["payload"].get("candidate", event["source_node"])
         term = event["term"]
         node = self.nodes.get(candidate)
@@ -99,19 +98,17 @@ class ClusterStateMachine:
         term = event["term"]
         votes = int(event["payload"].get("votes", 0))
 
-        # Record election
+        # Record election result
         self.election_history.append((term, leader, votes, "won"))
 
-        # BUG 3: Updates leader state but does NOT reset votes_received for
-        # the new term. The votes_received from THIS election persist and
-        # carry over, affecting future vote counting if the node becomes
-        # candidate again. Also does not reset other nodes' votes_received.
+        # BUG 3: Does NOT reset votes_received after election win.
+        # Votes from the current election persist, affecting future elections
+        # if a node becomes a candidate again in a later term.
         if leader in self.nodes:
             node = self.nodes[leader]
             node.term = term
             node.role = "leader"
             node.leader_id = leader
-            # Missing: node.votes_received = 0  (should reset after winning)
 
         # Update all other nodes to recognize new leader
         for nid, node in self.nodes.items():
@@ -145,16 +142,13 @@ class ClusterStateMachine:
 
         target_node = self.nodes[target]
 
-        # BUG 5: Computes new_idx using prev_log_idx without adding 1.
-        # In Raft, prev_log_idx is the index of the PRECEDING entry, so the
-        # new entry should go at prev_log_idx + 1. Using just prev_log_idx
-        # causes entries to OVERWRITE the previous entry instead of being
-        # appended after it. For the first entry (prev_log_idx=0), this puts
-        # it at index 0 instead of index 1, eliminating the NULL prefix.
+        # BUG 5: Uses prev_log_idx directly as position. In Raft, prev_log_idx
+        # is the index of the PRECEDING entry, so the new entry goes at
+        # prev_log_idx + 1. This off-by-one causes entries to overwrite
+        # the previous slot and eliminates the initial NULL prefix.
         new_idx = prev_log_idx  # BUG: should be prev_log_idx + 1
 
-        # Append entry to target's log at the calculated position
-        # If log is shorter than expected, pad with None entries
+        # Place entry at calculated position, padding if needed
         while len(target_node.log) < new_idx:
             target_node.log.append(None)
 
@@ -163,53 +157,40 @@ class ClusterStateMachine:
         elif new_idx < len(target_node.log):
             target_node.log[new_idx] = (term, entry)
 
-        # Also append to leader's own log (leader tracks its own entries)
-        # BUG 5b: The guard condition uses `prev_log_idx` to decide whether
-        # to append to the leader's log, but it checks against the CURRENT
-        # log length AFTER potentially modifying it from a previous
-        # APPEND_ENTRY to the other follower in the same batch. This means
-        # for the SECOND follower's append message (same entry, same
-        # prev_log_idx), the guard may incorrectly trigger a duplicate
-        # append because len(leader_node.log) has already grown.
-        # The correct approach: only append if the entry at prev_log_idx+1
-        # doesn't already exist in the leader's log.
+        # Also track entry in leader's own log. Guard against duplicate
+        # appends from the second APPEND_ENTRY message in the same batch.
         if leader in self.nodes:
             leader_node = self.nodes[leader]
             expected_new_idx = prev_log_idx + 1
             if len(leader_node.log) <= prev_log_idx:
-                # Leader log is behind - pad and append
                 while len(leader_node.log) <= prev_log_idx:
                     leader_node.log.append(None)
                 leader_node.log.append((term, entry))
-            elif len(leader_node.log) == expected_new_idx:
-                # Leader log is exactly at the right spot - append
+            elif len(leader_node.log) <= expected_new_idx:
                 leader_node.log.append((term, entry))
-            # BUG 5b: Missing the case where len > expected_new_idx
-            # (entry already exists). In this case we should do nothing,
-            # but the elif above catches ONLY the == case. If another
-            # code path sets the leader log to exactly expected_new_idx
-            # between the two APPEND messages, this double-appends.
 
     def _handle_append_ack(self, event):
         """Follower acknowledges a log entry."""
-        # ACKs are informational; commit is handled by COMMIT events
         pass
 
     def _handle_commit(self, event):
-        """Leader commits an entry (quorum achieved)."""
+        """
+        Leader commits an entry (quorum achieved).
+        Updates commit tracking and advances commit_index.
+        """
         leader = event["payload"].get("leader")
         commit_idx = int(event["payload"].get("commit_idx", 0))
-        term = event["term"]
 
-        # BUG 4: Counts a commit for EACH node that needs to advance,
-        # instead of counting just one commit per COMMIT event.
-        # A single COMMIT event means one entry was committed cluster-wide,
-        # but this code increments total_commits for every node whose
-        # commit_index is behind, tripling the count (3 nodes).
+        # BUG 4: Increments total_commits for each node that needs to advance,
+        # counting 3x per event instead of once.
         for nid, node in self.nodes.items():
             if node.commit_index < commit_idx:
-                self.total_commits += 1  # BUG: should only count once per event
-            node.commit_index = commit_idx
+                self.total_commits += 1
+            # Advance commit_index: only the leader processes COMMIT events
+            # directly; followers learn about commits via AppendEntries RPCs
+            # (heartbeat mechanism not modeled in this simplified replay).
+            if nid == leader:
+                node.commit_index = commit_idx
 
     def get_cluster_state(self):
         """Return final state of all nodes."""
