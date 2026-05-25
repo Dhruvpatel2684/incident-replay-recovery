@@ -1,0 +1,15 @@
+{
+  "vault_id": "vault-2024-alpha",
+  "master_password": "correct-horse-battery-staple",
+  "salt_hex": "a3f2b891c4d5e6f708192a3b4c5d6e7f",
+  "kdf_iterations": 10000,
+  "cipher_block_size": 16,
+  "messages": [
+    {"id": "msg-001", "plaintext": "Transfer $50,000 to account 7839-2841", "priority": "high"},
+    {"id": "msg-002", "plaintext": "Meeting confirmed for Tuesday 3pm EST", "priority": "normal"},
+    {"id": "msg-003", "plaintext": "Authorization code: XRAY-7742-DELTA", "priority": "high"},
+    {"id": "msg-004", "plaintext": "The quick brown fox jumps over the lazy dog", "priority": "low"},
+    {"id": "msg-005", "plaintext": "NULL\u0000BYTE test with embedded nulls\u0000\u0000end", "priority": "normal"}
+  ],
+  "nonce_prefix": "4e6f6e636530303031"
+}
