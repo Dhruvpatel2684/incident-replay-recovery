@@ -33,6 +33,35 @@ Honestly there are a bunch of things wrong and they seem related:
 
 - **Leader has extra log entry** — total_events_processed (sum of all log lengths) is wrong. One node has more entries than it should.
 
+## Output file format
+
+The replayer produces two files in `/app/runtime/`:
+
+**`cluster_state.jsonl`** — one JSON record per line (sorted by node_id):
+```json
+{
+  "node_id": "node-1",
+  "term": 4,
+  "role": "follower",
+  "log_length": 8,
+  "commit_index": 6,
+  "committed_entries": ["NULL", "term1:SET:x=1", "..."],
+  "leader_id": "node-3"
+}
+```
+
+**`integrity.json`** — summary statistics:
+```json
+{
+  "total_commits": 6,
+  "leader_elections": 3,
+  "split_votes": 1,
+  "consistency_hash": "<16-char hex string>",
+  "total_events_processed": 24,
+  "final_term": 4
+}
+```
+
 ## How to run
 
 ```bash
