@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+/logs/
+*.egg-info/
+.correct_state.json
