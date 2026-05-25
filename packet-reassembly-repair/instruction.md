@@ -72,7 +72,7 @@ SEQ_NUM|FLOW_ID|PAYLOAD_HEX|FLAGS|TIMESTAMP
 {
   "total_flows": 3,
   "total_segments": 17,
-  "total_retransmits": 4,
+  "total_retransmits": 3,
   "total_overlaps": 3,
   "per_flow": {
     "flow_A": {
