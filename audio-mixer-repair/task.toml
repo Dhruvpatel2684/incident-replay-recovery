@@ -1,0 +1,13 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "signal_processing"
+difficulty = "hard"
+tags = ["audio", "dsp", "signal-processing", "mixing", "gain", "panning", "debugging", "state-machine"]
+difficulty_explanation = "7 deeply semantic DSP bugs across 3 modules requiring domain expertise in decibel math (log10 vs ln), trigonometry (radians vs degrees), statistical corrections (Bessel's N-1), 16-bit PCM bounds, and hash ordering. Bugs are disguised with plausible technical comments about TLS correction, phase inversion, and TSO alignment. Modules are 150-386 lines each with many correct red-herring functions (FFT, spectral centroid, zero-crossing). Cascading effects: wrong log base corrupts all RMS values which cascade into dynamic range and checksum."
+solution_explanation = "Fix Bug 1: remove abs() from gain slope calculation. Fix Bug 2: change math.log() to math.log10() in linear_to_db. Fix Bug 3: convert 45 degrees to pi/4 radians in pan law. Fix Bug 4: change (end-start-1) to (end-start) in crossfade. Fix Bug 5: change -32767 to -32768 in clip lower bound. Fix Bug 6: change N to N-1 in RMS denominator. Fix Bug 7: reverse channel processing order in checksum (R,L → L,R)."
+verification_explanation = "15 pytest tests in groups: structure (5 pass even buggy), DSP correctness (3 tests require pan/gain fixes), level accuracy (4 tests require dB/RMS fixes), integrity (1 test requires all fixes + correct hash order). NOP: 7 pass, 8 fail. Oracle: 15 pass."
+expert_time_estimate_hours = 3.5
+
+[task]
+name = "audio-mixer-repair"
+description = "Debug a multi-channel audio mixing pipeline with 7 interacting DSP bugs across gain interpolation (abs slope), unit conversion (log vs log10), trigonometric domain (degrees vs radians), crossfade boundaries, sample clipping, statistical method (Bessel correction), and data ordering in checksum computation."
