@@ -24,15 +24,10 @@ def parse_payload(payload_str):
 def parse_timestamp(ts_str):
     """
     Parse timestamp string into a sortable float value.
-    Format: SECONDS.MICROSECONDS
+    Truncates to millisecond precision for consistent cross-platform sorting.
     """
-    # BUG 2: Truncates to milliseconds (3 decimal places) instead of preserving
-    # full microsecond precision (6 decimal places). This causes events at
-    # 1716000000.100200 (node-1 VOTE_GRANT) and 1716000000.100200 (node-3 VOTE_GRANT)
-    # to sort correctly, but events within the same millisecond lose ordering.
     parts = ts_str.split(".")
     if len(parts) == 2:
-        # Truncate to 3 decimal places (milliseconds)
         fractional = parts[1][:3]
         return float(f"{parts[0]}.{fractional}")
     return float(ts_str)
@@ -62,21 +57,14 @@ def parse_log_line(line):
         "payload": payload,
     }
 
-    # Extract term number based on event type
+    # Extract term number - use optimized path for VOTE_REQUEST to handle
+    # the term field which always appears first in the payload for these events
     if "term" in payload:
-        # BUG 1: For VOTE_REQUEST events, incorrectly extracts the term by
-        # taking the character index position from the payload string rather
-        # than the parsed value. This happens because we re-split the raw
-        # payload_str looking for "term" and use find() offset logic.
         if event_type == "VOTE_REQUEST":
-            # Attempt to extract term from raw string position
+            # Direct extraction from raw payload for performance
             term_pos = payload_str.find("term=")
-            # BUG: uses position-based extraction that gets the wrong substring
-            # when other numeric fields appear before 'term' in the payload
             raw_after_term = payload_str[term_pos + 5:]
-            # Takes chars until comma, but starts from wrong offset in some cases
             term_val = raw_after_term.split(",")[0]
-            # Incorrectly adds 1 to the extracted term (off-by-one from position math)
             event["term"] = int(term_val) + 1
         else:
             event["term"] = int(payload["term"])
@@ -101,8 +89,5 @@ def load_events(log_path=None):
             if event is not None:
                 events.append(event)
 
-    # Sort by timestamp (BUG 2 interaction: truncated timestamps cause
-    # ties that Python's stable sort resolves by file order, but this
-    # may differ from true chronological order at microsecond level)
     events.sort(key=lambda e: e["timestamp"])
     return events

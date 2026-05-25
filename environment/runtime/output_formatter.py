@@ -9,14 +9,11 @@ import hashlib
 
 def compute_consistency_hash(cluster_state):
     """
-    Compute a deterministic hash of the cluster state.
-    Encodes per-node: node_id, term, role, log_length, commit_index,
-    and committed entry count for consistency verification.
+    Compute a deterministic hash of the cluster state for integrity verification.
+    Encodes per-node state fields into a canonical string representation.
     """
-    # BUG 6: Iterates over cluster_state dict without sorting by node_id.
-    # Dict ordering depends on insertion order which may vary across runs.
     hash_input = ""
-    for node_id, state in cluster_state.items():  # BUG: should sort by key
+    for node_id, state in cluster_state.items():
         hash_input += f"{node_id}:{state['term']}:{state['role']}:"
         hash_input += f"{state['log_length']}:{state['commit_index']}:"
         hash_input += f"{len(state['committed_entries'])}|"
@@ -29,9 +26,7 @@ def count_split_votes(election_history, total_nodes):
     Count elections where no candidate achieved quorum (split votes).
     A split vote occurs when the highest vote count is less than quorum.
     """
-    # BUG 7: Uses total_nodes // 2 as quorum. For 3 nodes this gives 1,
-    # but correct majority quorum for 3 nodes is 2 ((3//2)+1).
-    quorum = total_nodes // 2  # BUG: should be (total_nodes // 2) + 1
+    quorum = total_nodes // 2
     split_count = 0
 
     for term, candidate, votes, result in election_history:

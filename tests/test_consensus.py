@@ -1,7 +1,6 @@
 """
 Tests for consensus-log-repair task.
-Validates that the consensus log replayer produces correct output files
-with proper cluster state and integrity statistics.
+Validates the consensus log replayer output files.
 """
 
 import json
@@ -31,42 +30,23 @@ def load_integrity():
 
 
 def test_commit_count_matches_event_count():
-    """
-    The total_commits field must equal the number of COMMIT events in the log.
-    There are exactly 6 COMMIT events in cluster_logs.txt (commits for indices
-    1 through 6). Each COMMIT event represents one entry being committed
-    cluster-wide, so total_commits must be 6.
-    """
+    """Verify total_commits matches the actual COMMIT event count in the log."""
     integrity = load_integrity()
     assert integrity["total_commits"] == 6, (
-        f"Expected total_commits=6 (one per COMMIT event), "
-        f"got {integrity['total_commits']}"
+        f"Expected total_commits=6, got {integrity['total_commits']}"
     )
 
 
 def test_split_vote_detection():
-    """
-    The split_votes field must count elections that failed because the
-    candidate received fewer votes than quorum. With 3 nodes, quorum is 2.
-    Term 3 has an election where node-3 received only 1 vote (self-vote)
-    and failed, so split_votes must be 1.
-    """
+    """Verify failed elections with insufficient votes are detected."""
     integrity = load_integrity()
     assert integrity["split_votes"] == 1, (
-        f"Expected split_votes=1 (term 3 election failed with 1 vote < quorum 2), "
-        f"got {integrity['split_votes']}"
+        f"Expected split_votes=1, got {integrity['split_votes']}"
     )
 
 
 def test_consistency_hash_deterministic():
-    """
-    The consistency_hash must be computed from nodes in sorted order
-    (node-1, node-2, node-3) with correct state values. The hash formula
-    includes node_id, term, role, log_length, commit_index, and the count
-    of committed_entries for each node. This ensures deterministic output
-    regardless of internal dict ordering.
-    Expected hash: c767f2c76fbddae8
-    """
+    """Verify the consistency hash is correct and deterministic."""
     integrity = load_integrity()
     assert integrity["consistency_hash"] == "c767f2c76fbddae8", (
         f"Expected consistency_hash='c767f2c76fbddae8', "
@@ -75,13 +55,7 @@ def test_consistency_hash_deterministic():
 
 
 def test_uniform_log_length_across_nodes():
-    """
-    All three nodes must have identical log_length values. Since every
-    APPEND_ENTRY in the log is successfully ACK'd by all followers,
-    all nodes should converge to the same log length of 8 entries
-    (1 null prefix + 6 committed entries + 1 uncommitted entry).
-    Commit index should be 6 for all (last COMMIT was for index 6).
-    """
+    """Verify all nodes converge to the same log state."""
     records = load_cluster_state()
     log_lengths = {r["node_id"]: r["log_length"] for r in records}
 
@@ -92,13 +66,11 @@ def test_uniform_log_length_across_nodes():
             f"Expected log_length=8 for {node_id}, got {length}"
         )
 
-    # All must be equal
     lengths = list(log_lengths.values())
     assert lengths[0] == lengths[1] == lengths[2], (
         f"Log lengths are not uniform: {log_lengths}"
     )
 
-    # Commit index must be 6 for all nodes
     for record in records:
         assert record["commit_index"] == 6, (
             f"Expected commit_index=6 for {record['node_id']}, "
@@ -107,14 +79,7 @@ def test_uniform_log_length_across_nodes():
 
 
 def test_committed_entries_complete():
-    """
-    Each node's committed_entries must contain all entries through
-    commit_index=6. The last entry at index 7 (SET:z=30) was replicated
-    but never committed (no COMMIT event for it in the log).
-    Expected entries (indices 0-6):
-    NULL, term1:SET:x=1, term1:SET:y=2, term1:SET:z=3,
-    term2:SET:x=10, term2:SET:w=5, term4:SET:y=20
-    """
+    """Verify committed_entries contains exactly the committed log prefix."""
     expected_entries = [
         "NULL",
         "term1:SET:x=1",
@@ -137,12 +102,7 @@ def test_committed_entries_complete():
 
 
 def test_total_events_and_final_term():
-    """
-    Validates derived integrity statistics:
-    - total_events_processed must be 24 (sum of all log_length = 8*3)
-    - final_term must be 4 (highest term reached in the cluster)
-    - leader_elections must be 3 (terms 1, 2, and 4 had successful elections)
-    """
+    """Verify derived integrity statistics are correct."""
     integrity = load_integrity()
 
     assert integrity["total_events_processed"] == 24, (

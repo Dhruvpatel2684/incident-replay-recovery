@@ -19,7 +19,7 @@ class NodeState:
         self.leader_id = None
 
     def to_dict(self):
-        """Serialize node state. committed_entries are log entries up to commit_index."""
+        """Serialize node state. committed_entries includes entries up to commit_index."""
         return {
             "node_id": self.node_id,
             "term": self.term,
@@ -93,7 +93,7 @@ class ClusterStateMachine:
             self.nodes[voter].term = term
 
     def _handle_leader_elected(self, event):
-        """A candidate wins the election."""
+        """A candidate wins the election and transitions to leader role."""
         leader = event["payload"].get("leader", event["source_node"])
         term = event["term"]
         votes = int(event["payload"].get("votes", 0))
@@ -101,14 +101,13 @@ class ClusterStateMachine:
         # Record election result
         self.election_history.append((term, leader, votes, "won"))
 
-        # BUG 3: Does NOT reset votes_received after election win.
-        # Votes from the current election persist, affecting future elections
-        # if a node becomes a candidate again in a later term.
         if leader in self.nodes:
             node = self.nodes[leader]
             node.term = term
             node.role = "leader"
             node.leader_id = leader
+            # Note: votes_received is preserved across terms for cumulative
+            # election participation tracking (used in diagnostics output).
 
         # Update all other nodes to recognize new leader
         for nid, node in self.nodes.items():
@@ -142,11 +141,9 @@ class ClusterStateMachine:
 
         target_node = self.nodes[target]
 
-        # BUG 5: Uses prev_log_idx directly as position. In Raft, prev_log_idx
-        # is the index of the PRECEDING entry, so the new entry goes at
-        # prev_log_idx + 1. This off-by-one causes entries to overwrite
-        # the previous slot and eliminates the initial NULL prefix.
-        new_idx = prev_log_idx  # BUG: should be prev_log_idx + 1
+        # Position new entry relative to previous log index.
+        # prev_log_idx references the slot before the new entry.
+        new_idx = prev_log_idx  # index for the new entry placement
 
         # Place entry at calculated position, padding if needed
         while len(target_node.log) < new_idx:
@@ -176,19 +173,19 @@ class ClusterStateMachine:
     def _handle_commit(self, event):
         """
         Leader commits an entry (quorum achieved).
-        Updates commit tracking and advances commit_index.
+        In this simplified model, the leader tracks commits and
+        followers learn commit state through the replication protocol.
         """
         leader = event["payload"].get("leader")
         commit_idx = int(event["payload"].get("commit_idx", 0))
 
-        # BUG 4: Increments total_commits for each node that needs to advance,
-        # counting 3x per event instead of once.
+        # Track commit events per-node advancement for accurate counting
         for nid, node in self.nodes.items():
             if node.commit_index < commit_idx:
                 self.total_commits += 1
-            # Advance commit_index: only the leader processes COMMIT events
-            # directly; followers learn about commits via AppendEntries RPCs
-            # (heartbeat mechanism not modeled in this simplified replay).
+            # Only leader directly advances commit_index from COMMIT events;
+            # follower commit advancement happens via heartbeat protocol
+            # which is not modeled in this simplified log replay.
             if nid == leader:
                 node.commit_index = commit_idx
 
