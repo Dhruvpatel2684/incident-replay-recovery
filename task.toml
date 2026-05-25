@@ -1,0 +1,13 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "networking"
+difficulty = "hard"
+tags = ["networking", "firewall", "iptables", "rule-compilation", "python"]
+
+difficulty_explanation = "Requires understanding of firewall rule semantics, CIDR subnet arithmetic, priority-based evaluation ordering, and conflict resolution strategies. The four bugs interact — fixing one alone does not produce correct output because the remaining bugs affect different stages of the compilation pipeline."
+
+solution_explanation = "Four fixes are required: (1) reverse the priority sort order from descending to ascending so lower-numbered priorities evaluate first, (2) correct the CIDR host count formula from 2^prefix to 2^(32-prefix) so specificity calculations are correct, (3) change conflict resolution to prefer DENY over ALLOW for security-first semantics, and (4) restructure port parsing to handle comma-separated lists before dash ranges so multi-port specs are not inflated."
+
+verification_explanation = "The test suite contains 18 tests covering rule ordering, CIDR arithmetic, port resolution, conflict resolution, group expansion, output format, and summary correctness. Tests validate the compiled output files directly without re-running the compiler."
+
+expert_time_estimate_hours = 2.0

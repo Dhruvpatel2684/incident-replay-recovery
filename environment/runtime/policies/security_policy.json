@@ -1,0 +1,82 @@
+[
+  {
+    "id": "allow-web-public",
+    "priority": 100,
+    "action": "ALLOW",
+    "source": "0.0.0.0/0",
+    "destination": "web-servers",
+    "protocol": "tcp",
+    "ports": "80,443",
+    "description": "Allow public web access"
+  },
+  {
+    "id": "deny-internal-to-db",
+    "priority": 50,
+    "action": "DENY",
+    "source": "internal-network",
+    "destination": "db-servers",
+    "protocol": "tcp",
+    "ports": "5432",
+    "description": "Block direct internal access to databases"
+  },
+  {
+    "id": "allow-app-to-db",
+    "priority": 30,
+    "action": "ALLOW",
+    "source": "app-servers",
+    "destination": "db-servers",
+    "protocol": "tcp",
+    "ports": "5432",
+    "description": "Allow app servers to reach databases"
+  },
+  {
+    "id": "deny-all-ssh",
+    "priority": 200,
+    "action": "DENY",
+    "source": "0.0.0.0/0",
+    "destination": "all-servers",
+    "protocol": "tcp",
+    "ports": "22",
+    "description": "Block all SSH from outside"
+  },
+  {
+    "id": "allow-bastion-ssh",
+    "priority": 150,
+    "action": "ALLOW",
+    "source": "bastion-hosts",
+    "destination": "all-servers",
+    "protocol": "tcp",
+    "ports": "22",
+    "description": "Allow SSH from bastion only"
+  },
+  {
+    "id": "allow-monitoring",
+    "priority": 80,
+    "action": "ALLOW",
+    "source": "monitoring-network",
+    "destination": "all-servers",
+    "protocol": "tcp",
+    "ports": "9090,9100",
+    "description": "Allow Prometheus scraping"
+  },
+  {
+    "id": "deny-external-admin",
+    "priority": 80,
+    "action": "DENY",
+    "source": "0.0.0.0/0",
+    "destination": "all-servers",
+    "protocol": "tcp",
+    "ports": "8443,9090",
+    "description": "Block external admin panel access"
+  },
+  {
+    "id": "default-deny",
+    "priority": 999,
+    "action": "DENY",
+    "source": "0.0.0.0/0",
+    "destination": "0.0.0.0/0",
+    "protocol": "any",
+    "ports": "any",
+    "description": "Default deny all unmatched traffic"
+  }
+]

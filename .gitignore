@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+environment/runtime/output/*
+!environment/runtime/output/.gitkeep
+/logs/
