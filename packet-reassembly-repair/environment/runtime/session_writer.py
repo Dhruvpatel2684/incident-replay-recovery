@@ -1,101 +1,92 @@
 """
 Session Writer Module
-Generates sessions.jsonl and reassembly_stats.json from reconstructed sessions.
+Serializes validated session records and statistics to output files.
+
+Output files:
+  sessions.jsonl — One JSON record per flow (sorted by flow_id)
+  reassembly_stats.json — Aggregate statistics and integrity checksum
+
+The writer applies final transformations:
+  - Filters internal metadata fields (prefixed with _)
+  - Rounds floating-point values for deterministic output
+  - Ensures consistent JSON serialization (sorted keys within each record)
 """
 
 import json
+import os
 import hashlib
 
 
-def compute_reassembly_checksum(sessions):
+def _filter_internal_fields(session_dict):
     """
-    Compute a deterministic hash of the reassembly output for integrity verification.
-    Encodes per-session fields into a canonical string representation.
+    Remove internal metadata fields (prefixed with '_') from a session dict.
+    These are used for intermediate processing but shouldn't appear in output.
     """
-    # Bug 6: Iterates over sessions dict without sorting by session_id.
-    # Dict iteration order depends on insertion order (Python 3.7+), which
-    # follows the order sessions first appeared in the capture file.
-    # Since sessions arrive interleaved (not in lexicographic order),
-    # this produces a non-deterministic hash relative to the expected
-    # canonical (sorted) output.
-    hash_input = ""
-    for session_id, state in sessions.items():
-        hash_input += f"{session_id}:{state['total_fragments']}:{state['payload_bytes']}:"
-        hash_input += f"{state['is_complete']}:{len(state['fragment_offsets'])}|"
-
-    return hashlib.sha256(hash_input.encode()).hexdigest()[:16]
+    return {k: v for k, v in session_dict.items() if not k.startswith("_")}
 
 
-def compute_bloom_fpr(total_sessions, total_fragments):
+def _compute_flow_fingerprint(session):
     """
-    Estimate bloom filter false-positive rate for the session index.
-    Formula: num_sessions / (num_sessions + total_fragment_slots)
+    Generate a short fingerprint for each flow record.
+    Used for quick visual verification during debugging.
+
+    Fingerprint = md5(flow_id + total_bytes + fragment_count)[:8]
+    This is NOT the integrity checksum — it's a per-record helper.
     """
-    # Bug 7: Wrong denominator. Uses (sessions * fragments) instead of
-    # (sessions + fragments). This produces a much smaller FPR value.
-    return total_sessions / (total_sessions * total_fragments)
+    raw = f"{session['flow_id']}:{session['total_payload_bytes']}:{session['fragment_count']}"
+    return hashlib.md5(raw.encode()).hexdigest()[:8]
 
 
-def format_output(sessions, retransmissions, rtt_samples, output_dir):
+def write_sessions_jsonl(sessions, output_path):
     """
-    Write final output files:
-    - sessions.jsonl: one JSON line per session (sorted by session_id)
-    - reassembly_stats.json: summary statistics
-    """
-    import os
+    Write sessions.jsonl — one JSON record per flow.
 
-    # Write sessions.jsonl
+    Records are written in sorted order by flow_id for deterministic output.
+    Each record is self-contained JSON with sorted keys.
+    """
+    with open(output_path, "w") as f:
+        for flow_id in sorted(sessions.keys()):
+            session = sessions[flow_id]
+            record = _filter_internal_fields(session)
+            record["fingerprint"] = _compute_flow_fingerprint(record)
+            f.write(json.dumps(record, sort_keys=True) + "\n")
+
+
+def write_stats_json(stats, output_path):
+    """Write reassembly_stats.json with sorted keys."""
+    with open(output_path, "w") as f:
+        json.dump(stats, f, indent=2, sort_keys=True)
+        f.write("\n")
+
+
+def write_output(validated_sessions, retransmit_info, stats_extra, output_dir):
+    """
+    Main output function — writes both output files.
+
+    Also enriches sessions with per-flow retransmit counts before writing.
+    The retransmit_count per flow comes from the per_flow_retransmits dict
+    in retransmit_info.
+    """
+    per_flow_retransmits = retransmit_info.get("per_flow_retransmits", {})
+    enriched_sessions = {}
+
+    for flow_id, session in validated_sessions.items():
+        enriched = dict(session)
+        # *** BUG 7: Per-flow retransmit count includes implicit duplicates ***
+        # The per_flow_retransmits dict already has inflated counts due to
+        # Bug 1 (implicit duplicates counted as retransmits). Additionally,
+        # this code falls back to 0 for flows not in the dict, which is
+        # correct — but the dict itself has wrong values for flows that
+        # received out-of-order duplicates (like flow-alpha, flow-gamma,
+        # flow-zeta, flow-theta, flow-lambda which each have 1 implicit dup).
+        #
+        # The visible effect: flows like flow-alpha show retransmit_count=2
+        # (1 real + 1 implicit) instead of 1 (real only).
+        enriched["retransmit_count"] = per_flow_retransmits.get(flow_id, 0)
+        enriched_sessions[flow_id] = enriched
+
     jsonl_path = os.path.join(output_dir, "sessions.jsonl")
-    with open(jsonl_path, "w") as f:
-        for session_id in sorted(sessions.keys()):
-            state = sessions[session_id]
-            record = {
-                "session_id": state["session_id"],
-                "total_fragments": state["total_fragments"],
-                "payload_bytes": state["payload_bytes"],
-                "is_complete": state["is_complete"],
-                "fragment_offsets": state["fragment_offsets"],
-            }
-            f.write(json.dumps(record) + "\n")
-
-    # Compute stats
-    total_sessions = len(sessions)
-    total_bytes = sum(s["payload_bytes"] for s in sessions.values())
-    complete_count = sum(1 for s in sessions.values() if s["is_complete"])
-    total_fragments = sum(s["total_fragments"] for s in sessions.values())
-    avg_frags = total_fragments / total_sessions if total_sessions > 0 else 0
-
-    # RTT estimation
-    avg_rtt = sum(rtt_samples) / len(rtt_samples) if rtt_samples else 0.0
-
-    # Max offset across all sessions
-    max_offset = 0
-    for s in sessions.values():
-        if s["fragment_offsets"]:
-            local_max = max(s["fragment_offsets"])
-            if local_max > max_offset:
-                max_offset = local_max
-
-    # Checksum
-    checksum = compute_reassembly_checksum(sessions)
-
-    # Bloom filter FPR
-    bloom_fpr = compute_bloom_fpr(total_sessions, total_fragments)
-
-    stats = {
-        "total_sessions": total_sessions,
-        "total_bytes_reassembled": total_bytes,
-        "retransmissions_detected": retransmissions,
-        "complete_sessions": complete_count,
-        "reassembly_checksum": checksum,
-        "avg_fragments_per_session": round(avg_frags, 2),
-        "estimated_avg_rtt_ms": round(avg_rtt, 2),
-        "max_fragment_offset": max_offset,
-        "bloom_filter_fpr": round(bloom_fpr, 6),
-    }
-
     stats_path = os.path.join(output_dir, "reassembly_stats.json")
-    with open(stats_path, "w") as f:
-        json.dump(stats, f, indent=2)
 
-    return jsonl_path, stats_path
+    write_sessions_jsonl(enriched_sessions, jsonl_path)
+    write_stats_json(stats_extra, stats_path)

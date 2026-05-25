@@ -1,295 +1,327 @@
 """
-Repair script for packet-reassembly-repair task.
-Re-processes the raw fragment capture with correct logic and overwrites
-the broken output files with correct results.
+Oracle repair script for packet-reassembly-repair task.
 
-Fixes applied:
-1. fragment_parser.py Bug 1: FIN offset — remove erroneous +1 adjustment
-2. fragment_parser.py Bug 2: LAST_FRAGMENT payload_len — don't subtract 1
-3. reassembly_engine.py Bug 3: Only count bytes for NEW fragments (not retransmits)
-4. reassembly_engine.py Bug 4: RTT = (retransmit_time - original_time), not reversed
-5. reassembly_engine.py Bug 5: FIN handler should NOT add fin_offset to byte count
-6. session_writer.py Bug 6: Sort sessions by session_id before computing checksum
-7. session_writer.py Bug 7: Bloom FPR formula = sessions / (sessions + fragments)
+Patches the buggy runtime modules and re-runs the pipeline to produce
+correct output. Fixes 7 bugs across 3 modules:
 
-Bug Interactions (difficulty design):
-- Fixing Bug 1 (FIN +1) alone still leaves is_complete=False because Bug 2 makes
-  the last fragment 1 byte short, so expected_next != fin_offset
-- Fixing Bug 3 (retransmit bytes) alone still shows wrong total_bytes because
-  Bug 5 (FIN bytes) also inflates the count
-- The checksum (Bug 6) depends on ALL other values being correct first —
-  fixing sort order alone gives wrong hash if payload_bytes are still inflated
+Bug 1 (flow_tracker.py): Implicit duplicates incorrectly counted as retransmissions.
+  - Fix: In FlowState.ingest_data(), when is_dup is True for a regular DATA
+    fragment, increment duplicate_count (not retransmit_count) and do NOT
+    append to retransmit_pairs.
+
+Bug 2 (flow_tracker.py): Consequence of Bug 1 — RTT samples polluted with
+  implicit duplicate timestamps. Fix is same as Bug 1 (no separate code change).
+
+Bug 3 (reassembly_engine.py): _compute_payload_total() subtracts 1 byte from
+  the last fragment of flows with ≤3 fragments ("TLS correction").
+  - Fix: Remove the special case — always use frag["data_len"] directly.
+
+Bug 4 (reassembly_engine.py): Completeness check uses >= instead of ==.
+  - Fix: Change `expected_next_byte >= session.fin_offset` to
+    `expected_next_byte == session.fin_offset`.
+
+Bug 5 (integrity_checker.py): packet_loss_estimate uses wrong denominator.
+  - Fix: Change `total_retransmits / total_frags` to
+    `total_retransmits / (total_frags + total_retransmits)`.
+
+Bug 6 (integrity_checker.py): Checksum iterates dict keys without sorting.
+  - Fix: Change `self._validated_sessions.keys()` to
+    `sorted(self._validated_sessions.keys())`.
+
+Bug 7 (session_writer.py): Per-flow retransmit counts include implicit dups.
+  - Fix: This is automatically fixed when Bug 1 is fixed, because
+    per_flow_retransmits will no longer include implicit duplicates.
+
+Bug Interactions:
+  - Bug 4 (>=) masks Bug 3's effect on is_complete. Fixing Bug 4 alone makes
+    6 flows incomplete. Must fix BOTH 3 and 4 together.
+  - Bug 7 is downstream of Bug 1. Fixing Bug 1 automatically fixes Bug 7.
+  - Bug 6 (checksum) depends on ALL other values being correct. It's the
+    "final boss" test — only passes when everything else is fixed.
 """
 
-import json
-import hashlib
 import os
+import sys
 
+# Paths
 RUNTIME_DIR = "/app/runtime"
 CAPTURE_FILE = os.path.join(RUNTIME_DIR, "capture.fragments")
 
+sys.path.insert(0, RUNTIME_DIR)
 
-# ============================================================
-# FIXED Fragment Parser
-# ============================================================
+# Import the parser (it's correct — no bugs there)
+from fragment_parser import parse_capture_file
 
-def parse_fragment_line(line):
-    """Parse a single capture line into a structured fragment dict."""
-    line = line.strip()
-    if not line or line.startswith("#"):
-        return None
+# We'll reimplement the buggy modules inline with corrections
 
-    parts = line.split("|")
-    if len(parts) != 7:
-        return None
-
-    timestamp_str, session_id, frag_type, seq_offset_str, payload_len_str, flags, payload_hash = parts
-    timestamp = float(timestamp_str)
-
-    fragment = {
-        "timestamp": timestamp,
-        "session_id": session_id,
-        "fragment_type": frag_type,
-        "flags": flags,
-        "payload_hash": payload_hash,
-    }
-
-    # FIX for Bug 1: FIN offset is just the value in the field, no +1.
-    # The offset already represents the correct end-of-stream position.
-    fragment["seq_offset"] = int(seq_offset_str)
-
-    # FIX for Bug 2: payload_len is always the raw value from the capture.
-    # LAST_FRAGMENT does NOT have an extra delimiter byte — the field
-    # already contains the exact payload data length.
-    fragment["payload_len"] = int(payload_len_str)
-
-    return fragment
-
-
-def load_fragments():
-    """Load all fragments from the capture file, sorted by timestamp."""
-    fragments = []
-    with open(CAPTURE_FILE, "r") as f:
-        for line in f:
-            fragment = parse_fragment_line(line)
-            if fragment is not None:
-                fragments.append(fragment)
-
-    fragments.sort(key=lambda f: f["timestamp"])
-    return fragments
+from collections import OrderedDict
+import hashlib
+import statistics
+import json
 
 
 # ============================================================
-# FIXED Reassembly Engine
+# FIXED FlowTracker (Bugs 1, 2 fixed)
 # ============================================================
 
-class SessionBuffer:
-    def __init__(self, session_id):
-        self.session_id = session_id
-        self.fragments = {}
-        self.total_payload_bytes = 0
-        self.is_complete = False
-        self.fin_received = False
-        self.fin_offset = 0
+class FixedFlowState:
+    def __init__(self, flow_id, syn_fragment):
+        self.flow_id = flow_id
+        self.fragments = []
+        self.syn_timestamp = syn_fragment["timestamp"]
+        self.fin_timestamp = None
+        self.fin_byte_offset = None
+        self.retransmit_pairs = []
+        self.retransmit_count = 0
+        self.duplicate_count = 0
+        self._dedup_cache = OrderedDict()
 
-    def to_dict(self):
-        offsets = sorted(self.fragments.keys())
-        return {
-            "session_id": self.session_id,
-            "total_fragments": len(self.fragments),
-            "payload_bytes": self.total_payload_bytes,
-            "is_complete": self.is_complete,
-            "fragment_offsets": offsets,
-        }
+    def ingest_data(self, fragment):
+        is_explicit_retransmit = (fragment["proto_type"] == "RETRANSMIT")
 
+        if is_explicit_retransmit:
+            key = (fragment["byte_offset"], fragment["data_len"])
+            if key in self._dedup_cache:
+                original_ts = self._dedup_cache[key]
+                self.retransmit_pairs.append((original_ts, fragment["timestamp"]))
+            self.retransmit_count += 1
+            return False
 
-class ReassemblyEngine:
-    def __init__(self):
-        self.sessions = {}
-        self.retransmission_count = 0
-        self.rtt_samples = []
+        # Regular DATA — check dedup
+        key = (fragment["byte_offset"], fragment["data_len"])
+        if key in self._dedup_cache:
+            # FIX: Only increment duplicate_count, NO RTT sample
+            self.duplicate_count += 1
+            return False
 
-    def process_fragment(self, fragment):
-        frag_type = fragment["fragment_type"]
-        session_id = fragment["session_id"]
+        # New fragment
+        self._dedup_cache[key] = fragment["timestamp"]
+        self.fragments.append(fragment)
+        return True
 
-        if session_id not in self.sessions:
-            self.sessions[session_id] = SessionBuffer(session_id)
-
-        session = self.sessions[session_id]
-
-        if frag_type == "SYN":
-            pass
-        elif frag_type == "DATA":
-            self._handle_data(session, fragment)
-        elif frag_type == "FIN":
-            self._handle_fin(session, fragment)
-
-    def _handle_data(self, session, fragment):
-        offset = fragment["seq_offset"]
-        payload_len = fragment["payload_len"]
-        timestamp = fragment["timestamp"]
-        payload_hash = fragment["payload_hash"]
-        flags = fragment["flags"]
-
-        # Check for retransmission (same offset already seen)
-        if offset in session.fragments:
-            if flags == "DUPLICATE":
-                self.retransmission_count += 1
-                # FIX for Bug 4: RTT = retransmit_time - original_time (positive)
-                existing_ts = session.fragments[offset][1]
-                rtt = (timestamp - existing_ts) * 1000  # ms
-                self.rtt_samples.append(rtt)
-                # Keep original — don't replace
-            return
-
-        # FIX for Bug 3: Only count bytes for NEW (non-duplicate) fragments.
-        # This line is AFTER the dedup return, so retransmit bytes aren't counted.
-        session.fragments[offset] = (payload_len, timestamp, payload_hash)
-        session.total_payload_bytes += payload_len
-
-    def _handle_fin(self, session, fragment):
-        """FIX for Bug 5: FIN only sets control state, does NOT add to bytes."""
-        session.fin_received = True
-        session.fin_offset = fragment["seq_offset"]
-        # NO byte counting for FIN — it's a control message, not data
+    def receive_fin(self, fragment):
+        self.fin_timestamp = fragment["timestamp"]
+        self.fin_byte_offset = fragment["byte_offset"]
 
     def finalize(self):
-        for session_id, session in self.sessions.items():
-            if not session.fin_received:
-                continue
+        self.fragments.sort(key=lambda f: f["byte_offset"])
 
-            offsets = sorted(session.fragments.keys())
-            if not offsets:
-                continue
 
-            is_contiguous = True
-            expected_next = 0
-            for offset in offsets:
-                if offset != expected_next:
-                    is_contiguous = False
-                    break
-                payload_len = session.fragments[offset][0]
-                expected_next = offset + payload_len
+def run_fixed_tracker(fragments):
+    flows = {}
+    for frag in fragments:
+        flow_id = frag["flow_id"]
+        proto = frag["proto_type"]
 
-            if is_contiguous and expected_next == session.fin_offset:
-                session.is_complete = True
+        if proto == "SYN":
+            if flow_id not in flows:
+                flows[flow_id] = FixedFlowState(flow_id, frag)
+            continue
 
-    def get_sessions(self):
-        return {sid: session.to_dict() for sid, session in self.sessions.items()}
+        if flow_id not in flows:
+            continue
 
-    def get_retransmission_count(self):
-        return self.retransmission_count
+        flow = flows[flow_id]
+        if proto == "FIN":
+            flow.receive_fin(frag)
+        elif proto in ("DATA", "RETRANSMIT"):
+            flow.ingest_data(frag)
 
-    def get_rtt_samples(self):
-        return self.rtt_samples
+    for flow in flows.values():
+        flow.finalize()
+
+    # Aggregate retransmit info
+    total_retransmits = 0
+    all_rtt_pairs = []
+    per_flow = {}
+    for flow_id, flow in flows.items():
+        total_retransmits += flow.retransmit_count
+        all_rtt_pairs.extend(flow.retransmit_pairs)
+        if flow.retransmit_count > 0:
+            per_flow[flow_id] = flow.retransmit_count
+
+    retransmit_info = {
+        "total_retransmits": total_retransmits,
+        "total_duplicates": sum(f.duplicate_count for f in flows.values()),
+        "rtt_samples": all_rtt_pairs,
+        "per_flow_retransmits": per_flow,
+    }
+
+    return flows, retransmit_info
 
 
 # ============================================================
-# FIXED Session Writer
+# FIXED ReassemblyEngine (Bugs 3, 4 fixed)
 # ============================================================
 
-def compute_reassembly_checksum(sessions):
-    """FIX for Bug 6: Sort sessions by session_id for deterministic hash."""
-    hash_input = ""
-    for session_id in sorted(sessions.keys()):  # FIX: sorted iteration
-        state = sessions[session_id]
-        hash_input += f"{session_id}:{state['total_fragments']}:{state['payload_bytes']}:"
-        hash_input += f"{state['is_complete']}:{len(state['fragment_offsets'])}|"
+def reassemble_flow(flow_state):
+    fragments = flow_state.fragments
+    if not fragments:
+        return {
+            "flow_id": flow_state.flow_id,
+            "total_payload_bytes": 0,
+            "fragment_count": 0,
+            "is_complete": False,
+            "gap_count": 0,
+            "byte_offsets": [],
+            "max_byte_offset": 0,
+            "ttl_spread": 0,
+            "duration_ms": 0.0,
+        }
 
-    return hashlib.sha256(hash_input.encode()).hexdigest()[:16]
+    fragment_count = len(fragments)
+    fin_offset = flow_state.fin_byte_offset
+
+    first_ts = fragments[0]["timestamp"]
+    last_ts = flow_state.fin_timestamp or fragments[-1]["timestamp"]
+    duration_ms = (last_ts - first_ts) * 1000.0
+
+    expected_next_byte = 0
+    total_bytes = 0
+    gap_count = 0
+    byte_offsets = []
+    ttl_min = 255
+    ttl_max = 0
+
+    for frag in fragments:
+        offset = frag["byte_offset"]
+        length = frag["data_len"]
+
+        if frag["ttl"] < ttl_min:
+            ttl_min = frag["ttl"]
+        if frag["ttl"] > ttl_max:
+            ttl_max = frag["ttl"]
+
+        byte_offsets.append(offset)
+
+        if offset > expected_next_byte:
+            gap_count += 1
+
+        expected_next_byte = offset + length
+        # FIX Bug 3: Always use full data_len (no -1 correction)
+        total_bytes += length
+
+    max_offset = fragments[-1]["byte_offset"]
+
+    # FIX Bug 4: Use == not >=
+    is_complete = False
+    if fin_offset is not None:
+        if gap_count == 0 and expected_next_byte == fin_offset:
+            is_complete = True
+
+    return {
+        "flow_id": flow_state.flow_id,
+        "total_payload_bytes": total_bytes,
+        "fragment_count": fragment_count,
+        "is_complete": is_complete,
+        "gap_count": gap_count,
+        "byte_offsets": byte_offsets,
+        "max_byte_offset": max_offset,
+        "ttl_spread": ttl_max - ttl_min,
+        "duration_ms": round(duration_ms, 3),
+    }
 
 
-def compute_bloom_fpr(total_sessions, total_fragments):
-    """FIX for Bug 7: Correct formula is sessions / (sessions + fragments)."""
-    return total_sessions / (total_sessions + total_fragments)
+# ============================================================
+# FIXED IntegrityChecker (Bugs 5, 6 fixed)
+# ============================================================
+
+def compute_stats(sessions, retransmit_info):
+    total_flows = len(sessions)
+    complete_flows = sum(1 for s in sessions.values() if s["is_complete"])
+    total_bytes = sum(s["total_payload_bytes"] for s in sessions.values())
+    total_frags = sum(s["fragment_count"] for s in sessions.values())
+    max_flow_bytes = max(s["total_payload_bytes"] for s in sessions.values())
+
+    rtt_samples = retransmit_info.get("rtt_samples", [])
+    rtt_ms_values = [(r - o) * 1000.0 for o, r in rtt_samples]
+    avg_rtt = statistics.mean(rtt_ms_values) if rtt_ms_values else 0.0
+    rtt_jitter = statistics.stdev(rtt_ms_values) if len(rtt_ms_values) > 1 else 0.0
+
+    total_retransmits = retransmit_info["total_retransmits"]
+
+    # FIX Bug 5: Correct denominator
+    loss_rate = total_retransmits / (total_frags + total_retransmits) if (total_frags + total_retransmits) > 0 else 0.0
+
+    # FIX Bug 6: Sort by flow_id for deterministic checksum
+    hasher = hashlib.sha256()
+    for flow_id in sorted(sessions.keys()):
+        s = sessions[flow_id]
+        record = f"{flow_id}:{s['fragment_count']}:{s['total_payload_bytes']}:{s['is_complete']}:{s['gap_count']};"
+        hasher.update(record.encode("utf-8"))
+    checksum = hasher.hexdigest()[:16]
+
+    return {
+        "total_flows": total_flows,
+        "complete_flows": complete_flows,
+        "total_payload_bytes": total_bytes,
+        "total_retransmits": total_retransmits,
+        "avg_rtt_ms": round(avg_rtt, 3),
+        "rtt_jitter_ms": round(rtt_jitter, 3),
+        "integrity_checksum": checksum,
+        "avg_fragments_per_flow": round(total_frags / total_flows, 2) if total_flows else 0,
+        "max_single_flow_bytes": max_flow_bytes,
+        "packet_loss_estimate": round(loss_rate, 6),
+    }
 
 
-def format_output(sessions, retransmissions, rtt_samples):
-    """Write corrected output files."""
-    output_dir = RUNTIME_DIR
+# ============================================================
+# FIXED SessionWriter (Bug 7 auto-fixed by Bug 1 fix)
+# ============================================================
+
+def write_output(sessions, retransmit_info, stats, output_dir):
+    per_flow_retransmits = retransmit_info.get("per_flow_retransmits", {})
+
+    # Enrich with per-flow retransmit counts (now correct due to Bug 1 fix)
+    enriched = {}
+    for flow_id, session in sessions.items():
+        s = dict(session)
+        s["retransmit_count"] = per_flow_retransmits.get(flow_id, 0)
+        enriched[flow_id] = s
 
     # Write sessions.jsonl
     jsonl_path = os.path.join(output_dir, "sessions.jsonl")
     with open(jsonl_path, "w") as f:
-        for session_id in sorted(sessions.keys()):
-            state = sessions[session_id]
-            record = {
-                "session_id": state["session_id"],
-                "total_fragments": state["total_fragments"],
-                "payload_bytes": state["payload_bytes"],
-                "is_complete": state["is_complete"],
-                "fragment_offsets": state["fragment_offsets"],
-            }
-            f.write(json.dumps(record) + "\n")
+        for flow_id in sorted(enriched.keys()):
+            record = {k: v for k, v in enriched[flow_id].items() if not k.startswith("_")}
+            # Add fingerprint
+            raw = f"{record['flow_id']}:{record['total_payload_bytes']}:{record['fragment_count']}"
+            record["fingerprint"] = hashlib.md5(raw.encode()).hexdigest()[:8]
+            f.write(json.dumps(record, sort_keys=True) + "\n")
 
-    # Compute stats
-    total_sessions = len(sessions)
-    total_bytes = sum(s["payload_bytes"] for s in sessions.values())
-    complete_count = sum(1 for s in sessions.values() if s["is_complete"])
-    total_fragments = sum(s["total_fragments"] for s in sessions.values())
-    avg_frags = total_fragments / total_sessions if total_sessions > 0 else 0
-
-    avg_rtt = sum(rtt_samples) / len(rtt_samples) if rtt_samples else 0.0
-
-    max_offset = 0
-    for s in sessions.values():
-        if s["fragment_offsets"]:
-            local_max = max(s["fragment_offsets"])
-            if local_max > max_offset:
-                max_offset = local_max
-
-    checksum = compute_reassembly_checksum(sessions)
-    bloom_fpr = compute_bloom_fpr(total_sessions, total_fragments)
-
-    stats = {
-        "total_sessions": total_sessions,
-        "total_bytes_reassembled": total_bytes,
-        "retransmissions_detected": retransmissions,
-        "complete_sessions": complete_count,
-        "reassembly_checksum": checksum,
-        "avg_fragments_per_session": round(avg_frags, 2),
-        "estimated_avg_rtt_ms": round(avg_rtt, 2),
-        "max_fragment_offset": max_offset,
-        "bloom_filter_fpr": round(bloom_fpr, 6),
-    }
-
+    # Write stats
     stats_path = os.path.join(output_dir, "reassembly_stats.json")
     with open(stats_path, "w") as f:
-        json.dump(stats, f, indent=2)
-
-    return jsonl_path, stats_path
+        json.dump(stats, f, indent=2, sort_keys=True)
+        f.write("\n")
 
 
 # ============================================================
-# Main execution
+# Main
 # ============================================================
 
 def main():
-    # Load events with fixed parser
-    fragments = load_fragments()
+    # Parse capture (parser is correct)
+    fragments = parse_capture_file(CAPTURE_FILE)
+    print(f"[repair] Parsed {len(fragments)} fragments")
 
-    # Process with fixed engine
-    engine = ReassemblyEngine()
-    for fragment in fragments:
-        engine.process_fragment(fragment)
-    engine.finalize()
+    # Fixed tracking
+    flows, retransmit_info = run_fixed_tracker(fragments)
+    print(f"[repair] Tracked {len(flows)} flows, {retransmit_info['total_retransmits']} retransmits")
 
-    # Get results
-    sessions = engine.get_sessions()
-    retransmissions = engine.get_retransmission_count()
-    rtt_samples = engine.get_rtt_samples()
+    # Fixed reassembly
+    sessions = {}
+    for flow_id, flow_state in flows.items():
+        sessions[flow_id] = reassemble_flow(flow_state)
 
-    # Write output with fixed writer
-    format_output(
-        sessions=sessions,
-        retransmissions=retransmissions,
-        rtt_samples=rtt_samples,
-    )
+    # Fixed stats
+    stats = compute_stats(sessions, retransmit_info)
+    print(f"[repair] Stats: {stats['total_payload_bytes']} bytes, "
+          f"{stats['complete_flows']} complete, checksum={stats['integrity_checksum']}")
 
-    print(f"Repair complete. Processed {len(fragments)} fragments.")
-    print(f"Sessions: {len(sessions)}")
-    print(f"Retransmissions: {retransmissions}")
+    # Write output
+    write_output(sessions, retransmit_info, stats, RUNTIME_DIR)
+    print("[repair] Output written successfully")
 
 
 if __name__ == "__main__":

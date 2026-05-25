@@ -1,60 +1,46 @@
-# Packet Reassembly — Broken After Refactor
+# Packet Reassembly Pipeline — Broken After Network Stack Refactor
 
-## What happened
+## Incident Summary
 
-We have a packet fragment reassembler that reads captured network fragments (like a simplified TCP stream), reconstructs full messages from out-of-order pieces using sequence numbers, detects duplicate retransmissions, and produces a session reconstruction summary. It was passing all checks three weeks ago.
+Our packet fragment reassembly pipeline processes edge-ingress captures from production network appliances. It takes raw fragment captures (from a simplified TCP-like protocol), reconstructs complete sessions from out-of-order fragments, detects retransmissions, and produces session reconstruction statistics for network observability.
 
-Then someone refactored the reassembly buffer logic "for performance" and now the output is garbage. Multiple fields are wrong and the bugs seem to interact with each other.
+The pipeline was passing all checks until last week when we refactored the flow tracking and reassembly layers to support higher throughput. Since the refactor, several output metrics are wrong. The bugs seem to interact — fixing one metric sometimes reveals that another was being masked.
 
-## How it works
+## Architecture
 
-Four Python files in `/app/runtime/`:
+Five Python modules in `/app/runtime/`:
 
-- `reassembler.py` — entry point, just wires stuff together (this file is fine)
-- `fragment_parser.py` — reads `capture.fragments`, turns lines into fragment dicts
-- `reassembly_engine.py` — takes fragments and reconstructs sessions (groups by session_id, orders by offset, detects retransmissions, merges payloads)
-- `session_writer.py` — takes reconstructed sessions, writes `sessions.jsonl` and `reassembly_stats.json`
+- `reassembler.py` — pipeline entry point, orchestrates stages (this file is correct)
+- `fragment_parser.py` — reads `capture.fragments`, produces structured fragment records (this module is correct)
+- `flow_tracker.py` — per-flow state machine, deduplication, retransmit detection
+- `reassembly_engine.py` — byte-range reconstruction, gap detection, completeness verdict
+- `integrity_checker.py` — cross-flow validation, aggregate stats, integrity checksum
+- `session_writer.py` — final serialization and enrichment (correct, just passes data through)
 
-The input capture (`capture.fragments`) has fragments from 8 sessions, some arriving out of order, some retransmitted. The capture file itself is correct — don't modify it.
+The input capture (`capture.fragments`) contains 85 fragment records from 12 flows. The capture is correct — don't modify it.
 
-## What's broken (symptoms we're seeing)
+## What's broken
 
-Honestly there are multiple things wrong and they seem related:
+Multiple metrics are wrong and the issues seem interdependent:
 
-- **Session payload lengths are wrong** — reassembled messages have incorrect byte counts. The payload length calculation for some fragment types seems off, like it's using the header length instead of the data length.
+1. **Retransmission count is inflated** — we're seeing 12 retransmissions but the capture only has 7 R-flagged packets. It looks like late out-of-order duplicate arrivals are being conflated with actual retransmissions.
 
-- **Retransmission count is wrong** — we know there are exactly 5 duplicate fragments in the capture, but the detector is reporting a different number. Looks like it's keeping the wrong copy when a retransmission arrives (keeping the later one instead of the original).
+2. **Payload byte counts are slightly off** — several flows are reporting 1 byte less than expected. The total across all flows is 15282 but should be 15288. Only some flows are affected.
 
-- **Gap detection is broken** — sessions that should be fully contiguous (no missing bytes) are showing gaps. Something about how fragment offsets are parsed for certain packet types introduces an off-by-one.
+3. **Packet loss estimate is way too high** — reporting ~0.245 when it should be ~0.125. This might be related to the inflated retransmit count, or there could be a formula error.
 
-- **Checksum is non-deterministic** — the integrity checksum gives different results between runs. The fragment ordering within a session isn't stable before hashing.
+4. **Integrity checksum doesn't match** — the checksum is supposed to be deterministic but we're getting `297fb04947ae2d83` instead of the expected `6e66d7e4ef19a678`. This could be caused by any upstream data corruption OR by a non-deterministic iteration order.
 
-- **Session boundaries bleed** — fragments from one session are appearing in another. The reassembly buffer state carries over between sessions instead of being reset.
+5. **Curiously, all completeness checks pass** — despite the byte count errors, all 12 flows show as "complete". We suspect there might be a compensating error somewhere that masks the byte count issue.
 
-- **RTT estimate is wrong** — the round-trip time calculation between original and retransmission uses the wrong timestamp field, producing an inflated value.
+## Expected correct output
 
-- **total_bytes_reassembled is inflated** — it includes retransmitted bytes that should have been deduplicated out. Deduplication seems to happen after byte counting instead of before.
-
-## Output file format
-
-The reassembler produces two files in `/app/runtime/`:
-
-**`sessions.jsonl`** — one JSON record per reassembled session (sorted by session_id), each with:
-- `session_id` (string): the session identifier
-- `total_fragments` (int): unique (non-retransmitted) fragments in this session
-- `payload_bytes` (int): total reassembled payload size in bytes
-- `is_complete` (bool): true if no gaps exist in the byte range
-- `fragment_offsets` (list of int): sorted list of unique byte offsets
-
-**`reassembly_stats.json`** — summary with:
-- `total_sessions` (int): number of distinct sessions
-- `total_bytes_reassembled` (int): sum of payload_bytes across all sessions
-- `retransmissions_detected` (int): number of duplicate fragments found
-- `complete_sessions` (int): sessions with is_complete=true
-- `reassembly_checksum` (string): 16-char hex SHA-256 prefix over sorted output
-- `avg_fragments_per_session` (float): mean fragment count per session
-- `estimated_avg_rtt_ms` (float): average RTT in milliseconds from retransmission pairs
-- `max_fragment_offset` (int): highest byte offset seen across all sessions
+The pipeline should produce:
+- 12 flows, all complete (no gaps)
+- Total payload: 15288 bytes
+- 7 retransmissions (R-flagged only)
+- Packet loss ≈ 0.125
+- Checksum: `6e66d7e4ef19a678`
 
 ## How to run
 
@@ -62,12 +48,12 @@ The reassembler produces two files in `/app/runtime/`:
 python3 /app/runtime/reassembler.py
 ```
 
-This regenerates `sessions.jsonl` and `reassembly_stats.json` in `/app/runtime/`.
+Produces `sessions.jsonl` and `reassembly_stats.json` in `/app/runtime/`.
 
 ## What we need
 
-Fix the bugs in the processing modules so the output is correct. The entry point (`reassembler.py`) is fine — the problems are in how fragments get parsed, how reassembly and deduplication work, and how the session output gets generated.
+Fix the bugs in the pipeline modules. The entry point (`reassembler.py`), the fragment parser (`fragment_parser.py`), and the session writer (`session_writer.py`) are working correctly — the issues are in the flow tracking, reassembly engine, and integrity checker.
 
-Fair warning: these bugs interact with each other. Fixing one thing might not show improvement until you also fix the related issue in another file. The checksum in particular depends on multiple fields being correct simultaneously.
+Warning: the bugs interact. One bug in the reassembly engine is currently MASKED by another bug in the same module — fixing one without the other will cause completeness checks to start failing where they currently pass. Similarly, the retransmit counting issue cascades downstream into RTT estimation and per-flow annotations.
 
-Python 3 standard library is available system-wide. No external packages needed.
+Python 3 standard library only. No external packages needed.

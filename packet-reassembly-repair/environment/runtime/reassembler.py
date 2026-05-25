@@ -1,69 +1,67 @@
 """
-Packet Reassembler - Main Entrypoint
-Orchestrates reassembly of network fragment captures into session reconstructions.
+Packet Reassembler — Production Entrypoint
+Orchestrates fragment capture ingestion, reassembly, and output generation.
+
+Pipeline stages:
+  1. fragment_parser: Raw capture → structured fragment objects
+  2. flow_tracker: Fragment deduplication, ordering, retransmit detection
+  3. reassembly_engine: Per-flow byte-range reconstruction and gap analysis
+  4. integrity_checker: Cross-flow validation and consistency verification
+  5. session_writer: Final output serialization with checksums
 
 Usage: python3 reassembler.py
-
-Reads: capture.fragments (raw network fragment capture)
-Produces:
-  - sessions.jsonl (per-session reconstruction, one JSON record per line)
-  - reassembly_stats.json (summary statistics and integrity checksum)
 """
 
 import os
 import sys
 
-# Ensure runtime directory is on the path
 RUNTIME_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, RUNTIME_DIR)
 
-from fragment_parser import load_fragments
+from fragment_parser import parse_capture_file
+from flow_tracker import FlowTracker
 from reassembly_engine import ReassemblyEngine
-from session_writer import format_output
-
-
-# Output directory (same as runtime dir)
-OUTPUT_DIR = RUNTIME_DIR
+from integrity_checker import IntegrityChecker
+from session_writer import write_output
 
 
 def main():
-    """Main execution: parse fragments, reassemble sessions, write output."""
+    """Execute the full reassembly pipeline."""
 
-    # Load and parse all fragments from the capture file
     capture_path = os.path.join(RUNTIME_DIR, "capture.fragments")
-    fragments = load_fragments(capture_path)
 
-    print(f"Loaded {len(fragments)} fragments from capture")
+    # Stage 1: Parse raw capture into fragment records
+    fragments = parse_capture_file(capture_path)
+    print(f"[stage-1] Parsed {len(fragments)} fragment records")
 
-    # Initialize the reassembly engine
-    engine = ReassemblyEngine()
+    # Stage 2: Track flows — dedup, retransmit detection, ordering
+    tracker = FlowTracker()
+    for frag in fragments:
+        tracker.ingest(frag)
+    tracker.finalize_flows()
 
-    # Process all fragments
-    for fragment in fragments:
-        engine.process_fragment(fragment)
+    flow_states = tracker.get_flow_states()
+    retransmit_info = tracker.get_retransmit_info()
+    print(f"[stage-2] Tracked {len(flow_states)} flows, "
+          f"{retransmit_info['total_retransmits']} retransmissions")
 
-    # Finalize sessions
-    engine.finalize()
+    # Stage 3: Reassemble byte ranges per flow
+    engine = ReassemblyEngine(flow_states)
+    engine.reassemble_all()
 
-    # Get results
     sessions = engine.get_sessions()
-    retransmissions = engine.get_retransmission_count()
-    rtt_samples = engine.get_rtt_samples()
+    print(f"[stage-3] Reassembled {len(sessions)} sessions")
 
-    print(f"Reassembly complete. {len(sessions)} sessions reconstructed.")
-    print(f"Retransmissions detected: {retransmissions}")
+    # Stage 4: Integrity checks and cross-flow validation
+    checker = IntegrityChecker(sessions, retransmit_info)
+    checker.validate()
+    validated_sessions = checker.get_validated_sessions()
+    stats_extra = checker.get_integrity_stats()
 
-    # Format and write output
-    jsonl_path, stats_path = format_output(
-        sessions=sessions,
-        retransmissions=retransmissions,
-        rtt_samples=rtt_samples,
-        output_dir=OUTPUT_DIR,
-    )
-
-    print(f"Output written:")
-    print(f"  - {jsonl_path}")
-    print(f"  - {stats_path}")
+    # Stage 5: Write output files
+    output_dir = RUNTIME_DIR
+    write_output(validated_sessions, retransmit_info, stats_extra, output_dir)
+    print(f"[stage-5] Output written to {output_dir}")
 
     return 0
 

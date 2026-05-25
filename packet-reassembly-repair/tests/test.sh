@@ -3,10 +3,8 @@ set -euo pipefail
 
 mkdir -p /logs/verifier
 
-# Run the entrypoint if output doesn't exist yet
-if [ ! -f /app/runtime/sessions.jsonl ]; then
-    python3 /app/runtime/reassembler.py
-fi
+# Run the entrypoint to generate output
+python3 /app/runtime/reassembler.py
 
 set +e
 uv run --with pytest pytest -v /tests/test_reassembly.py
