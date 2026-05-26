@@ -1,0 +1,20 @@
+{
+  "network_id": "core",
+  "edges": [
+    {"source": "A", "target": "B", "link_type": "direct", "weight": 0.9, "seq": 0},
+    {"source": "A", "target": "C", "link_type": "direct", "weight": 0.8, "seq": 1},
+    {"source": "B", "target": "D", "link_type": "relay", "weight": 0.7, "seq": 2},
+    {"source": "B", "target": "E", "link_type": "direct", "weight": 0.85, "seq": 3},
+    {"source": "C", "target": "D", "link_type": "tunnel", "weight": 0.6, "seq": 4},
+    {"source": "C", "target": "F", "link_type": "direct", "weight": 0.75, "seq": 5},
+    {"source": "D", "target": "G", "link_type": "relay", "weight": 0.65, "seq": 6},
+    {"source": "E", "target": "G", "link_type": "direct", "weight": 0.9, "seq": 7},
+    {"source": "E", "target": "H", "link_type": "mesh", "weight": 0.5, "seq": 8},
+    {"source": "F", "target": "H", "link_type": "direct", "weight": 0.8, "seq": 9},
+    {"source": "F", "target": "G", "link_type": "tunnel", "weight": 0.55, "seq": 10},
+    {"source": "G", "target": "I", "link_type": "direct", "weight": 0.95, "seq": 11},
+    {"source": "H", "target": "I", "link_type": "relay", "weight": 0.7, "seq": 12},
+    {"source": "H", "target": "J", "link_type": "mesh", "weight": 0.45, "seq": 13},
+    {"source": "I", "target": "J", "link_type": "direct", "weight": 0.88, "seq": 14}
+  ]
+}

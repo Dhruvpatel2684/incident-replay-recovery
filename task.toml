@@ -1,0 +1,37 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "graph_algorithms"
+difficulty = "hard"
+tags = ["graph-reachability", "bfs-traversal", "path-scoring", "network-topology", "directed-graphs"]
+
+difficulty_explanation = "Four interacting defects across configuration parsing, parameter sourcing, score accumulation, and sort ordering. The mesh link type exclusion changes graph connectivity, wrong hop limits change which nodes are reachable, accumulation inflates level scores, and sort instability affects BFS discovery order. Partial fixes produce different incorrect outputs."
+solution_explanation = "Strip whitespace from comma-split link types in run_reachability.py, read max_hops from traversal.constraints section in traversal.py, remove running_total accumulation in scorer.py to use per-level values, and add network_id as sort tiebreaker in loader.py."
+verification_explanation = "Tests check exact numeric values for edge counts, reachability pairs, per-node reachable counts, hop depths, level scores, and individual path scores that require all four defects resolved simultaneously."
+expert_time_estimate_hours = 3.0
+
+[task]
+name = "graph-reachability-repair"
+description = "Debug a graph reachability analysis engine that computes bounded BFS traversal and weighted path scores across multiple network topologies. Interacting defects in filtering, hop limits, score aggregation, and ordering produce incorrect reachability maps and inflated scores."
+
+[task.difficulty]
+level = "hard"
+reasoning = "Requires understanding BFS traversal semantics, configuration hierarchy, accumulation vs per-level aggregation patterns, and sort stability for deterministic graph processing. Defects cascade through the analysis stages."
+
+[task.runtime]
+entrypoint = "python3 -m runtime.run_reachability"
+language = "python"
+dependencies = "stdlib-only"
+
+[task.validator]
+command = "bash tests/test.sh"
+description = "Runs the reachability engine then validates output with pytest."
+
+[task.repair]
+command = "bash solution/solve.sh"
+description = "Patches all defects and re-runs the engine."
+
+[task.resources]
+timeout = 300
+cpu = 2
+memory = "2GB"
+disk = "1GB"

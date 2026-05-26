@@ -1,0 +1,19 @@
+{
+  "network_id": "backup",
+  "edges": [
+    {"source": "A", "target": "D", "link_type": "relay", "weight": 0.5, "seq": 0},
+    {"source": "A", "target": "F", "link_type": "tunnel", "weight": 0.45, "seq": 1},
+    {"source": "B", "target": "F", "link_type": "mesh", "weight": 0.35, "seq": 2},
+    {"source": "C", "target": "E", "link_type": "relay", "weight": 0.55, "seq": 3},
+    {"source": "D", "target": "H", "link_type": "direct", "weight": 0.6, "seq": 4},
+    {"source": "E", "target": "I", "link_type": "tunnel", "weight": 0.4, "seq": 5},
+    {"source": "F", "target": "I", "link_type": "relay", "weight": 0.52, "seq": 6},
+    {"source": "F", "target": "J", "link_type": "mesh", "weight": 0.38, "seq": 7},
+    {"source": "G", "target": "J", "link_type": "direct", "weight": 0.78, "seq": 8},
+    {"source": "H", "target": "K", "link_type": "tunnel", "weight": 0.42, "seq": 9},
+    {"source": "I", "target": "L", "link_type": "direct", "weight": 0.68, "seq": 10},
+    {"source": "J", "target": "M", "link_type": "relay", "weight": 0.57, "seq": 11},
+    {"source": "K", "target": "N", "link_type": "direct", "weight": 0.73, "seq": 12},
+    {"source": "L", "target": "N", "link_type": "mesh", "weight": 0.44, "seq": 13}
+  ]
+}
