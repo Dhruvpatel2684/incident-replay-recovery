@@ -1,131 +1,92 @@
-# Git Object Store Repair
+# Build Orchestrator — Dependency Analysis Repair
 
-## Overview
+## Background
 
-A git-style content-addressable object store has become inconsistent after a simulated storage failure. The store contains blob, tree, and commit objects identified by SHA-1 hashes of their content. Object references, branch pointers, and the staging index have all been corrupted. You must write a repair script that restores full integrity.
+You are debugging a build orchestration system that analyzes build target dependencies to produce execution plans. The system reads a DAG (directed acyclic graph) of 15 build targets, computes which targets can build in parallel, assigns scheduling priorities, and identifies the critical path.
 
-## System Description
+A recent refactor of the dependency analysis module (`/app/runtime/graph_analyzer.py`) introduced subtle bugs in the graph algorithms. The orchestrator runs without errors, produces output that *looks* reasonable, but the analysis results are wrong in ways that would cause incorrect scheduling in a real build system.
 
-The object store at `/app/runtime/store/` uses content-addressable storage where each object's filename is the SHA-1 hash of its content with a type-length header:
+## System Layout
 
-- **Blobs**: raw file content, hashed as `SHA1("blob <length>\0<content>")`
-- **Trees**: directory listings referencing blobs and subtrees by hash, hashed as `SHA1("tree <length>\0<content>")`
-- **Commits**: metadata referencing a tree and optional parent commit, hashed as `SHA1("commit <length>\0<content>")`
+- **Entry point:** `/app/runtime/run_orchestrator.py`
+- **Build targets:** `/app/runtime/build_targets.json` (15 targets forming a DAG)
+- **Graph analyzer:** `/app/runtime/graph_analyzer.py` (the buggy module)
+- **Plan builder:** `/app/runtime/plan_builder.py` (correct — uses analyzer results)
+- **Output writer:** `/app/runtime/output_writer.py` (correct — writes JSON)
+- **Output:** `/app/runtime/output/build_plan.json`
 
-The store also maintains:
-- `/app/runtime/store/refs/HEAD`: a plain text file containing the 40-character hex SHA-1 hash of the latest commit (no trailing newline, no "ref:" prefix)
-- `/app/runtime/store/index.json`: a JSON object mapping relative file paths to their blob hashes
+System-wide Python tooling and pytest are available.
 
-## Object Format Details
+## What the System Should Do
 
-### Blob objects
-A blob stores the exact raw content of a source file. The blob's filename in `/app/runtime/store/objects/` is computed as:
-```
-filename = SHA1("blob " + str(len(content)) + "\0" + content)
-```
-The file content stored at that path IS the raw source file content (no header in the stored file — the header is only used for hash computation).
+The orchestrator should:
+1. Parse the build target DAG from `/app/runtime/build_targets.json`
+2. Determine which pairs of targets are truly independent (no ordering constraint)
+3. Compute scheduling priorities reflecting how critical each target is
+4. Find the maximum set of targets that can safely execute in parallel
+5. Identify the critical path (longest dependency chain)
+6. Write a complete execution plan to `/app/runtime/output/build_plan.json`
 
-**Important**: Each blob must contain content that exactly matches a source file from `/app/runtime/source_files/`. The blob filename must be the SHA-1 hash computed using the git-style header format above.
+## Observed Symptoms
 
-### Tree objects
-A tree represents a directory listing. The stored content format is one entry per line:
-```
-<mode> <object_hash> <name>
-```
-Where:
-- `mode` is `100644` for regular files, `040000` for subdirectories
-- `object_hash` is the 40-character hex SHA-1 hash of the referenced blob or subtree
-- `name` is the filename or directory name (no path separators)
-- Entries MUST be sorted alphabetically by name
-- Content ends with a trailing newline
+After the refactor, the output has several issues:
 
-Example tree content (for a `lib/` directory with two files):
-```
-100644 abc123def456abc123def456abc123def456abc1 constants.py
-100644 789abc012def789abc012def789abc012def789a helper.py
-```
+- **The independent pair count is way too high.** The system reports ~84 independent pairs for a well-connected 15-node DAG. That's nearly 80% of all possible pairs — which makes no sense for targets that are clearly related through intermediate dependencies.
 
-The tree's filename is: `SHA1("tree " + str(len(tree_content)) + "\0" + tree_content)`
+- **Priority scores don't reflect how critical a target is.** Root targets (which everything depends on) get the same tiny priority as mid-graph nodes. The scores are all in the range 0-2, which seems to ignore the actual cost of downstream work.
 
-### Commit objects
-Format (stored as plain text):
-```
-tree <40-char-hex-tree-hash>
-parent <40-char-hex-parent-hash>
-author Dev User <dev@example.com> 1700000000 +0000
-committer Dev User <dev@example.com> 1700000000 +0000
+- **The parallel build set contains targets that clearly depend on each other.** The system claims 8 targets can run simultaneously, but inspection shows pairs in that set where one transitively depends on the other. Running these in parallel would cause build failures.
 
-<commit message>
-```
-- The `parent` line is OMITTED entirely for the initial commit (no parent)
-- Content ends with a trailing newline after the message
+- **The fingerprint hash doesn't match** because it's computed from the incorrect analysis data.
 
-The commit's filename is: `SHA1("commit " + str(len(commit_content)) + "\0" + commit_content)`
+## Expected Output Schema
 
-### refs/HEAD format
-A plain text file containing exactly the 40-character hex commit hash with no trailing newline.
+The file `/app/runtime/output/build_plan.json` should contain:
 
-### index.json format
-Located at `/app/runtime/store/index.json`. A JSON object mapping 6 relative project paths to their 40-character hex blob hashes. The keys are: `README.md`, `lib/constants.py`, `lib/helper.py`, and the three remaining source filenames. Each value must be the correct SHA-1 blob hash for that file's current content from `/app/runtime/source_files/`.
-
-## Ground Truth
-
-The original source files are preserved at `/app/runtime/source_files/`. These represent the correct current state of the project:
-- `/app/runtime/source_files/main.py`
-- `/app/runtime/source_files/utils.py`
-- `/app/runtime/source_files/config.json`
-- `/app/runtime/source_files/README.md`
-- `/app/runtime/source_files/lib/helper.py`
-- `/app/runtime/source_files/lib/constants.py`
-
-## Expected Store Structure After Repair
-
-The repaired store must contain:
-- **At least 6 blob objects**: one for each current source file, where the filename equals the SHA-1 hash of the file's content (computed with the blob header). A 7th blob for the historical version of `/app/runtime/source_files/main.py` (from commit 1) may also be present.
-- **3 tree objects**: a `lib/` subtree (2 entries sorted alphabetically), the current root tree (5 entries sorted alphabetically referencing the 4 file blobs plus the lib subtree), and the historical root tree from commit 1 (same 5 entries but references the old `/app/runtime/source_files/main.py` blob)
-- **2 commit objects**: an initial commit (no parent line, references the historical root tree, message "Initial commit") and a latest commit (has parent pointing to the initial commit, references the current root tree, message describing an update to the main module)
-- **refs/HEAD**: must contain the hash of the latest commit (the one WITH a parent line)
-- **index.json**: must map all 6 paths to their correct current blob hashes
-
-## Repair Procedure
-
-To repair the store, your script should:
-1. Read each source file from `/app/runtime/source_files/`
-2. Compute the correct blob hash for each file using `SHA1("blob <len>\0<content>")`
-3. Write (or rename) blob object files so filename = computed hash
-4. Build tree content strings with correct blob/subtree hashes (entries sorted alphabetically by name)
-5. Compute tree hashes and write tree object files
-6. Build commit content strings referencing correct tree hashes
-7. Compute commit hashes and write commit object files
-8. Write the latest commit hash to `/app/runtime/store/refs/HEAD`
-9. Write correct path-to-hash mappings to `/app/runtime/store/index.json`
-10. Run the verifier: `python3 /app/runtime/run_store.py`
-
-## Cascading Hash Dependencies
-
-Fixing one object changes downstream hashes:
-- Correcting a blob's filename → the tree referencing it has different content → different tree hash
-- Changing a tree hash → the commit referencing it has different content → different commit hash
-- Changing a commit hash → HEAD must be updated to the new hash
-
-## Environment
-
-- System-wide Python tooling and pytest are available
-- Python standard library only (hashlib, json, os, sys)
-- The runtime modules at `/app/runtime/` (hasher.py, object_store.py, tree_builder.py, commit_builder.py, verifier.py) are correct and can be imported for reference
-
-## Output
-
-Your repair must produce `/app/runtime/output/integrity_report.json` via the verifier (`python3 /app/runtime/run_store.py`). A successful repair produces:
 ```json
 {
-  "overall": "pass",
-  "checks": {
-    "object_hash_integrity": {"status": "pass", "errors": []},
-    "tree_references": {"status": "pass", "errors": []},
-    "commit_references": {"status": "pass", "errors": []},
-    "ref_validity": {"status": "pass", "errors": []},
-    "index_integrity": {"status": "pass", "errors": []}
-  }
+  "plan_version": "1.0",
+  "total_targets": 15,
+  "targets": [
+    {
+      "id": "target_X",
+      "name": "...",
+      "estimated_duration_ms": ...,
+      "dependencies": [...],
+      "priority": ...,
+      "in_parallel_set": true/false,
+      "on_critical_path": true/false
+    }
+  ],
+  "analysis": {
+    "independent_pair_count": ...,
+    "critical_path": ["target_X", ...],
+    "critical_path_length_ms": ...,
+    "parallel_set": ["target_X", ...],
+    "parallel_set_size": ...,
+    "execution_stages": [[...], ...],
+    "total_stages": ...,
+    "makespan_ms": ...,
+    "serial_time_ms": ...,
+    "speedup_factor": ...
+  },
+  "priorities": {"target_X": ..., ...},
+  "fingerprint": "sha256hex..."
 }
 ```
+
+## Your Task
+
+Diagnose and fix the bugs in `/app/runtime/graph_analyzer.py`. The module contains three functions with plausible-but-wrong graph algorithms that interact with each other. Each function implements a valid graph theory concept — just not the right one for this use case.
+
+Focus on:
+- How independence between targets is determined
+- How scheduling priority is computed
+- How the maximum parallel execution set is selected
+
+After applying your fix, regenerate the output by running:
+```
+python3 /app/runtime/run_orchestrator.py
+```
+
+The corrected plan should pass all validation checks in the test suite.

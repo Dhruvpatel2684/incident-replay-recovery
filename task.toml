@@ -1,9 +1,15 @@
 author_name = "Dhruvkumar Patel"
 author_email = "dhruvpatel2284@gmail.com"
-category = "version-control"
-difficulty = "hard"
-tags = ["git", "object-store", "sha1", "content-addressable", "python"]
-difficulty_explanation = "Requires understanding git-style content-addressable storage, SHA-1 hash computation with type-length headers, and cascading hash dependencies where fixing one object invalidates dependent objects. The agent must reason about the full dependency chain: blobs → trees → commits → refs."
-solution_explanation = "The repair script reads source files to recompute correct blob hashes, rebuilds tree objects with correct references, rebuilds commit objects with correct tree hashes, fixes the HEAD reference to point to the latest commit, and rebuilds the index with valid blob hashes. The key insight is that all repairs must cascade: fixing blobs changes tree content which changes tree hash which changes commit content which changes commit hash which changes what HEAD must reference."
-verification_explanation = "Tests verify the repaired store by checking: all object filenames match SHA-1 of content, correct object counts by type, tree references resolve to existing objects, commit tree/parent references are valid, HEAD points to latest commit, index maps to existing blobs, and blob content matches source files. An integrity report must show all checks passing."
+category = "build-systems"
+tags = ["build-systems", "dag", "dependency-graph", "scheduling", "critical-path"]
+
+[difficulty]
+rating = "hard"
+explanation = "Requires understanding three distinct graph algorithms (reachability vs adjacency, critical path vs out-degree, maximum antichain via topological layers vs greedy) and recognizing that each bug implements a plausible alternative algorithm. The bugs interact so fixing any single one in isolation doesn't fully resolve the symptoms."
+
+[solution]
+explanation = "Replace the are_independent function with BFS-based transitive reachability instead of direct adjacency checking. Replace compute_priority with a longest-path-to-terminal computation (critical path contribution) instead of out-degree counting. Replace find_parallel_set with widest-topological-layer selection (true maximum antichain) instead of descending-priority greedy. All three fixes must be applied together for correct output."
 expert_time_estimate_hours = 2.5
+
+[verification]
+explanation = "18 pytest tests across 4 tiers validate structural integrity, independent pair count bounds, priority value ranges, antichain correctness, critical path sequence, dependency ordering across stages, makespan calculation, and fingerprint integrity. The buggy code passes 11 structural/easy tests but fails 7 tests checking algorithmic correctness."

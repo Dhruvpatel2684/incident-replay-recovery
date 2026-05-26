@@ -1,9 +1,0 @@
-{
-    "app_name": "data-processor",
-    "version": "1.2.0",
-    "debug": false,
-    "max_retries": 3,
-    "timeout_seconds": 30,
-    "log_level": "INFO",
-    "output_format": "json"
-}

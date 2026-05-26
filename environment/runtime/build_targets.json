@@ -1,0 +1,92 @@
+[
+  {
+    "id": "target_1",
+    "name": "core-lib",
+    "estimated_duration_ms": 1200,
+    "dependencies": []
+  },
+  {
+    "id": "target_2",
+    "name": "utils-lib",
+    "estimated_duration_ms": 800,
+    "dependencies": []
+  },
+  {
+    "id": "target_3",
+    "name": "parser-module",
+    "estimated_duration_ms": 1500,
+    "dependencies": ["target_1"]
+  },
+  {
+    "id": "target_4",
+    "name": "config-module",
+    "estimated_duration_ms": 1000,
+    "dependencies": ["target_1", "target_2"]
+  },
+  {
+    "id": "target_5",
+    "name": "network-module",
+    "estimated_duration_ms": 1800,
+    "dependencies": ["target_2"]
+  },
+  {
+    "id": "target_6",
+    "name": "ast-engine",
+    "estimated_duration_ms": 2000,
+    "dependencies": ["target_3", "target_4"]
+  },
+  {
+    "id": "target_7",
+    "name": "scheduler-engine",
+    "estimated_duration_ms": 1600,
+    "dependencies": ["target_4", "target_5"]
+  },
+  {
+    "id": "target_8",
+    "name": "io-handler",
+    "estimated_duration_ms": 900,
+    "dependencies": ["target_5"]
+  },
+  {
+    "id": "target_9",
+    "name": "optimizer",
+    "estimated_duration_ms": 2200,
+    "dependencies": ["target_6", "target_7"]
+  },
+  {
+    "id": "target_10",
+    "name": "executor",
+    "estimated_duration_ms": 1400,
+    "dependencies": ["target_7", "target_8"]
+  },
+  {
+    "id": "target_11",
+    "name": "codegen-frontend",
+    "estimated_duration_ms": 1700,
+    "dependencies": ["target_9"]
+  },
+  {
+    "id": "target_12",
+    "name": "codegen-backend",
+    "estimated_duration_ms": 1900,
+    "dependencies": ["target_9", "target_10"]
+  },
+  {
+    "id": "target_13",
+    "name": "test-harness",
+    "estimated_duration_ms": 1100,
+    "dependencies": ["target_10"]
+  },
+  {
+    "id": "target_14",
+    "name": "release-bundler",
+    "estimated_duration_ms": 2500,
+    "dependencies": ["target_11", "target_12"]
+  },
+  {
+    "id": "target_15",
+    "name": "deploy-package",
+    "estimated_duration_ms": 1300,
+    "dependencies": ["target_12", "target_13"]
+  }
+]

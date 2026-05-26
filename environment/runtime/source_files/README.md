@@ -1,7 +1,0 @@
-# Data Processor
-
-A lightweight data processing application built with Python.
-
-## Usage
-
-Run `python main.py <input_args>` to process data through the pipeline.
