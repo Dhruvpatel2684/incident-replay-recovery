@@ -1,0 +1,9 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+
+[task]
+slug = "layout-engine-repair"
+category = "typesetting"
+title = "Document Layout Engine Recovery"
+description = "Recover a document layout engine that is producing incorrect pagination, wrong line widths, missing typesetting modes, and non-deterministic page break selection."
+difficulty = "hard"
