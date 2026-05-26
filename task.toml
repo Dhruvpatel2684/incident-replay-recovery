@@ -1,15 +1,26 @@
 author_name = "Dhruvkumar Patel"
 author_email = "dhruvpatel2284@gmail.com"
 category = "build-systems"
+difficulty = "hard"
 tags = ["build-systems", "dag", "dependency-graph", "scheduling", "critical-path"]
 
-[difficulty]
-rating = "hard"
-explanation = "Requires understanding three distinct graph algorithms (reachability vs adjacency, critical path vs out-degree, maximum antichain via topological layers vs greedy) and recognizing that each bug implements a plausible alternative algorithm. The bugs interact so fixing any single one in isolation doesn't fully resolve the symptoms."
+difficulty_explanation = "Requires understanding three distinct graph algorithms (reachability vs adjacency, critical path vs out-degree, maximum antichain via topological layers vs greedy) and recognizing that each bug implements a plausible alternative algorithm. The bugs interact so fixing any single one in isolation doesn't fully resolve the symptoms."
 
-[solution]
-explanation = "Replace the are_independent function with BFS-based transitive reachability instead of direct adjacency checking. Replace compute_priority with a longest-path-to-terminal computation (critical path contribution) instead of out-degree counting. Replace find_parallel_set with widest-topological-layer selection (true maximum antichain) instead of descending-priority greedy. All three fixes must be applied together for correct output."
+solution_explanation = "Replace the are_independent function with BFS-based transitive reachability instead of direct adjacency checking. Replace compute_priority with a longest-path-to-terminal computation (critical path contribution) instead of out-degree counting. Replace find_parallel_set with widest-topological-layer selection (true maximum antichain) instead of descending-priority greedy. All three fixes must be applied together for correct output."
+
+verification_explanation = "18 pytest tests across 4 tiers validate structural integrity, independent pair count bounds, priority value ranges, antichain correctness, critical path sequence, dependency ordering across stages, makespan calculation, and fingerprint integrity. The buggy code passes 12 structural/easy tests but fails 6 tests checking algorithmic correctness."
+
 expert_time_estimate_hours = 2.5
 
-[verification]
-explanation = "18 pytest tests across 4 tiers validate structural integrity, independent pair count bounds, priority value ranges, antichain correctness, critical path sequence, dependency ordering across stages, makespan calculation, and fingerprint integrity. The buggy code passes 11 structural/easy tests but fails 7 tests checking algorithmic correctness."
+[task]
+name = "build-orchestrator-repair"
+description = "Debug a build orchestration DAG analyzer where dependency independence checking, scheduling priority computation, and parallel set determination all implement wrong (but plausible) graph-theoretic concepts."
+
+[environment]
+dockerfile = "environment/Dockerfile"
+
+[solution]
+solve_script = "solution/solve.sh"
+
+[tests]
+test_script = "tests/test.sh"
