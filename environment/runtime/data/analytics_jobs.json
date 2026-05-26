@@ -1,0 +1,12 @@
+[
+  {"id": "A001", "name": "trend-analysis", "queue": "analytics", "group": "analytics", "priority_class": "medium", "scheduled_at": "2024-01-15T02:00:00", "duration_seconds": 180, "seq": 1},
+  {"id": "A002", "name": "funnel-compute", "queue": "analytics", "group": "analytics", "priority_class": "low", "scheduled_at": "2024-01-15T02:15:00", "duration_seconds": 240, "seq": 2},
+  {"id": "A003", "name": "cohort-refresh", "queue": "analytics", "group": "analytics", "priority_class": "high", "scheduled_at": "2024-01-15T02:15:00", "duration_seconds": 300, "seq": 3},
+  {"id": "A004", "name": "dashboard-update", "queue": "analytics", "group": "analytics", "priority_class": "medium", "scheduled_at": "2024-01-15T02:30:00", "duration_seconds": 60, "seq": 4},
+  {"id": "A005", "name": "ml-retrain", "queue": "analytics", "group": "analytics", "priority_class": "high", "scheduled_at": "2024-01-15T02:45:00", "duration_seconds": 900, "seq": 5},
+  {"id": "A006", "name": "segment-build", "queue": "analytics", "group": "analytics", "priority_class": "critical", "scheduled_at": "2024-01-15T03:00:00", "duration_seconds": 150, "seq": 6},
+  {"id": "A007", "name": "anomaly-scan", "queue": "analytics", "group": "analytics", "priority_class": "medium", "scheduled_at": "2024-01-15T03:00:00", "duration_seconds": 200, "seq": 7},
+  {"id": "A008", "name": "forecast-gen", "queue": "analytics", "group": "analytics", "priority_class": "low", "scheduled_at": "2024-01-15T03:15:00", "duration_seconds": 400, "seq": 8},
+  {"id": "A009", "name": "attribution-calc", "queue": "analytics", "group": "analytics", "priority_class": "high", "scheduled_at": "2024-01-15T03:15:00", "duration_seconds": 280, "seq": 9},
+  {"id": "A010", "name": "report-distribute", "queue": "analytics", "group": "analytics", "priority_class": "medium", "scheduled_at": "2024-01-15T03:30:00", "duration_seconds": 45, "seq": 10}
+]

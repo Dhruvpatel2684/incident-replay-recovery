@@ -1,0 +1,12 @@
+[
+  {"id": "R001", "name": "alert-dispatch", "queue": "realtime", "group": "realtime", "priority_class": "critical", "scheduled_at": "2024-01-15T02:00:00", "duration_seconds": 10, "seq": 1},
+  {"id": "R002", "name": "metric-push", "queue": "realtime", "group": "realtime", "priority_class": "high", "scheduled_at": "2024-01-15T02:05:00", "duration_seconds": 5, "seq": 2},
+  {"id": "R003", "name": "event-notify", "queue": "realtime", "group": "realtime", "priority_class": "critical", "scheduled_at": "2024-01-15T02:15:00", "duration_seconds": 8, "seq": 3},
+  {"id": "R004", "name": "health-check", "queue": "realtime", "group": "realtime", "priority_class": "medium", "scheduled_at": "2024-01-15T02:15:00", "duration_seconds": 15, "seq": 4},
+  {"id": "R005", "name": "webhook-fire", "queue": "realtime", "group": "realtime", "priority_class": "high", "scheduled_at": "2024-01-15T02:30:00", "duration_seconds": 12, "seq": 5},
+  {"id": "R006", "name": "cache-invalidate", "queue": "realtime", "group": "realtime", "priority_class": "critical", "scheduled_at": "2024-01-15T02:45:00", "duration_seconds": 3, "seq": 6},
+  {"id": "R007", "name": "session-refresh", "queue": "realtime", "group": "realtime", "priority_class": "medium", "scheduled_at": "2024-01-15T03:00:00", "duration_seconds": 20, "seq": 7},
+  {"id": "R008", "name": "queue-drain", "queue": "realtime", "group": "realtime", "priority_class": "high", "scheduled_at": "2024-01-15T03:00:00", "duration_seconds": 25, "seq": 8},
+  {"id": "R009", "name": "log-rotate", "queue": "realtime", "group": "realtime", "priority_class": "low", "scheduled_at": "2024-01-15T03:15:00", "duration_seconds": 30, "seq": 9},
+  {"id": "R010", "name": "state-snapshot", "queue": "realtime", "group": "realtime", "priority_class": "high", "scheduled_at": "2024-01-15T03:30:00", "duration_seconds": 18, "seq": 10}
+]

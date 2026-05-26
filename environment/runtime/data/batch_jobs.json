@@ -1,0 +1,12 @@
+[
+  {"id": "B001", "name": "nightly-backup", "queue": "batch", "group": "batch", "priority_class": "medium", "scheduled_at": "2024-01-15T02:00:00", "duration_seconds": 300, "seq": 1},
+  {"id": "B002", "name": "index-rebuild", "queue": "batch", "group": "batch", "priority_class": "low", "scheduled_at": "2024-01-15T02:05:00", "duration_seconds": 600, "seq": 2},
+  {"id": "B003", "name": "report-gen", "queue": "batch", "group": "batch", "priority_class": "medium", "scheduled_at": "2024-01-15T02:15:00", "duration_seconds": 180, "seq": 3},
+  {"id": "B004", "name": "data-export", "queue": "batch", "group": "batch", "priority_class": "high", "scheduled_at": "2024-01-15T02:15:00", "duration_seconds": 240, "seq": 4},
+  {"id": "B005", "name": "cache-warm", "queue": "batch", "group": "batch", "priority_class": "low", "scheduled_at": "2024-01-15T02:30:00", "duration_seconds": 120, "seq": 5},
+  {"id": "B006", "name": "archive-old", "queue": "batch", "group": "batch", "priority_class": "medium", "scheduled_at": "2024-01-15T02:45:00", "duration_seconds": 450, "seq": 6},
+  {"id": "B007", "name": "stats-compute", "queue": "batch", "group": "batch", "priority_class": "high", "scheduled_at": "2024-01-15T03:00:00", "duration_seconds": 200, "seq": 7},
+  {"id": "B008", "name": "cleanup-temp", "queue": "batch", "group": "batch", "priority_class": "low", "scheduled_at": "2024-01-15T03:00:00", "duration_seconds": 90, "seq": 8},
+  {"id": "B009", "name": "sync-replicas", "queue": "batch", "group": "batch", "priority_class": "critical", "scheduled_at": "2024-01-15T03:15:00", "duration_seconds": 500, "seq": 9},
+  {"id": "B010", "name": "validate-checksums", "queue": "batch", "group": "batch", "priority_class": "medium", "scheduled_at": "2024-01-15T03:30:00", "duration_seconds": 350, "seq": 10}
+]

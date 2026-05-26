@@ -1,0 +1,37 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "scheduling"
+difficulty = "hard"
+tags = ["scheduler", "priority-queue", "time-windows", "config-parsing", "sorting"]
+
+difficulty_explanation = "Requires tracing four interacting defects across configuration parsing, scheduling logic, and statistics computation. Bug A (whitespace in config list) silently excludes an entire job group. Bug B (wrong config section) changes time window granularity. Bug C (accumulation vs assignment) corrupts per-window statistics. Bug D (missing sort tiebreaker) produces non-deterministic ordering. The bugs interact: fixing A adds 10 more jobs which changes window distribution."
+solution_explanation = "The repair strips whitespace from comma-split group names, reads batch_window from [scheduler.execution] instead of [scheduler], changes load_by_priority from += to = (last-write-wins per snapshot), and adds priority_class to the sort key tuple for deterministic ordering of same-priority jobs from different queues."
+verification_explanation = "Tests check: all 30 jobs scheduled (no filtering), 7 time windows (15-min each), correct sort order at shared timestamps (critical first, then priority_class tiebreaker), window load uses last-value not sum, analytics jobs present, and output files exist with correct structure."
+expert_time_estimate_hours = 2.5
+
+[task]
+name = "priority-scheduler-repair"
+description = "Debug a priority-based task scheduling engine that incorrectly filters job groups, uses wrong time window granularity, accumulates stats incorrectly, and produces non-deterministic sort order"
+
+[task.difficulty]
+level = "hard"
+reasoning = "Four interacting bugs spanning config parsing, scheduling logic, and output computation require systematic diagnosis across multiple source files and data structures"
+
+[task.runtime]
+entrypoint = "python3 /app/runtime/run_scheduler.py"
+language = "python"
+dependencies = "stdlib-only"
+
+[task.validator]
+command = "bash tests/test.sh"
+description = "Runs pytest against 15 test functions checking job filtering, window counts, sort order, statistics, and output structure"
+
+[task.repair]
+command = "bash solution/solve.sh"
+description = "Patches scheduler.py with four fixes (whitespace strip, config section, assignment vs accumulation, sort key) then re-runs"
+
+[task.resources]
+timeout = 300
+cpu = 2
+memory = "2GB"
+disk = "1GB"
