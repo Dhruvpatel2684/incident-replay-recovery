@@ -3,19 +3,35 @@ author_email = "dhruvpatel2284@gmail.com"
 category = "compiler-internals"
 difficulty = "hard"
 tags = ["register-allocation", "graph-coloring", "data-repair", "interference-graph", "compiler"]
-difficulty_explanation = "Requires understanding register allocation via graph coloring, reasoning about corrupted data formats, identifying multiple corruption types from symptoms, and writing a multi-step repair script that restores semantic consistency"
-scoring_explanation = "15 graduated tests: 4 easy (output existence/structure), 4 medium (no conflicts, valid registers, correct node count), 7 hard (full interference correctness, edge count, spill count, live range consistency, register class constraints)"
-expert_time_estimate_hours = 1.5
+
+difficulty_explanation = "Requires understanding register allocation via graph coloring, reasoning about corrupted data formats, identifying multiple corruption types from symptoms, and writing a multi-step repair script that restores semantic consistency across interference graph and live range data."
+solution_explanation = "The repair script removes phantom nodes (nodes with no live range data), deduplicates edges in the adjacency list, fixes shifted live ranges (end_instruction exceeding max_instruction_index by subtracting 2), and recomputes missing interference edges by checking live range overlaps. After repair, the correct DSatur engine produces conflict-free register assignments."
+verification_explanation = "Tests verify: output files exist with valid structure, correct virtual register count in output, no register conflicts in assignments, no phantom registers, valid physical register names, correct node count matches live ranges, no duplicate edges, all live range overlaps have corresponding edges, no ranges exceed max_instruction_index, exact spill count of 0, exact edge count of 110, and register class constraints respected."
+expert_time_estimate_hours = 2.5
 
 [task]
-slug = "regalloc-interference-repair"
-description = "Repair corrupted interference graph and live range data so that a correct DSatur graph coloring register allocator produces valid assignments"
+name = "regalloc-interference-repair"
+description = "Repair corrupted interference graph and live range data so that a correct DSatur graph coloring register allocator produces valid conflict-free assignments"
 
-[task.environment]
-dockerfile = "environment/Dockerfile"
+[task.difficulty]
+level = "hard"
+reasoning = "Four interacting data corruptions require understanding graph coloring semantics, live range analysis, and the relationship between interference edges and overlapping live ranges"
 
-[task.solution]
-solve_script = "solution/solve.sh"
+[task.runtime]
+entrypoint = "python3 /app/runtime/run_allocator.py"
+language = "python"
+dependencies = "stdlib-only"
 
-[task.tests]
-test_script = "tests/test.sh"
+[task.validator]
+command = "bash tests/test.sh"
+description = "Runs pytest against 15 test functions checking register assignments, conflicts, graph properties, and allocation correctness"
+
+[task.repair]
+command = "bash solution/solve.sh"
+description = "Runs repair script that fixes corrupted data files then executes the allocator engine to produce correct output"
+
+[task.resources]
+timeout = 300
+cpu = 2
+memory = "2GB"
+disk = "1GB"
