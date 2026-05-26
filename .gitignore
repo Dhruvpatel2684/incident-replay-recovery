@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+environment/runtime/output/*.json
+_correct_manifest.json

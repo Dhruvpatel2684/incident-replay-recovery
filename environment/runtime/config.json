@@ -1,0 +1,52 @@
+{
+  "architecture": "amd64",
+  "os": "linux",
+  "created": "2024-03-15T08:05:45Z",
+  "config": {
+    "Env": [
+      "PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    ],
+    "WorkingDir": "/app",
+    "ExposedPorts": {
+      "8080/tcp": {}
+    },
+    "Cmd": [
+      "gunicorn",
+      "--bind",
+      "0.0.0.0:8080",
+      "app.main:app"
+    ]
+  },
+  "rootfs": {
+    "type": "layers",
+    "diff_ids": [
+      "sha256:be83d4963b1bbbb90b880229edf6bffb60fae5f16b89c9c6866a5357f0d72b88",
+      "sha256:020bb570cc352361b7e506af6bc3f0fa1ced2eb18c38adf8d03142ca2ede384e",
+      "sha256:d5cdc4f0d87615af7665a572b49fe4a6644d1b340c7396bdb5f4a4d9a7ec2d88",
+      "sha256:7e27201e6a0afa18ee29c1bd86f6976fa8a2eb480f9d5b1f15ae399f0ad598b4",
+      "sha256:a2ddace6348b8d10cda47bc5fa88d8aaf3ffc87b368baf9227de0c692cbe1789"
+    ]
+  },
+  "history": [
+    {
+      "created": "2024-03-15T08:00:00Z",
+      "created_by": "ENV PATH=/usr/local/bin:$PATH; RUN apt-get update"
+    },
+    {
+      "created": "2024-03-15T08:01:30Z",
+      "created_by": "RUN pip install flask==3.0.0; RUN pip install gunicorn==21.2.0"
+    },
+    {
+      "created": "2024-03-15T08:03:00Z",
+      "created_by": "COPY app/ /app/; WORKDIR /app"
+    },
+    {
+      "created": "2024-03-15T08:04:15Z",
+      "created_by": "RUN mkdir -p /data/cache; VOLUME /data"
+    },
+    {
+      "created": "2024-03-15T08:05:45Z",
+      "created_by": "EXPOSE 8080; CMD [\"gunicorn\", \"--bind\", \"0.0.0.0:8080\", \"app.main:app\"]"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "containers"
+difficulty = "hard"
+tags = ["oci", "container-images", "content-addressable-storage", "sha256", "manifest-verification"]
+
+difficulty_explanation = "The manifest data file is corrupted with wrong digests, wrong sizes, swapped layers, and a missing layer. The agent must write a repair script that computes SHA256 digests of layer files, reads the image config to determine correct ordering, and reconstructs the manifest. There is no simple code bug to find — the repair requires writing new computational logic."
+solution_explanation = "Compute SHA256 of each layer file in /app/runtime/layers/, read rootfs.diff_ids from config.json to determine correct ordering, match computed digests to diff_ids, get actual file sizes, and rewrite manifest.json with all 5 layers in the correct order with correct digests and sizes."
+verification_explanation = "Tests verify the verification report shows valid=true with zero errors, correct layer count, all digests valid, all sizes valid, and ordering matching the config's diff_ids."
+expert_time_estimate_hours = 2.5
+
+[task]
+name = "manifest-digest-repair"
+description = "Repair a corrupted OCI container image manifest where layer entries have wrong digests, incorrect sizes, swapped ordering, and missing entries. Requires computing SHA256 hashes of actual layer files and reconstructing the manifest to match the image configuration."
+
+[task.difficulty]
+level = "hard"
+reasoning = "Requires understanding OCI image manifest structure, content-addressable storage concepts, and writing computational repair logic from scratch rather than fixing existing code bugs."
+
+[task.runtime]
+entrypoint = "python3 -m runtime.run_verifier"
+language = "python"
+dependencies = "stdlib-only"
+
+[task.validator]
+command = "bash tests/test.sh"
+description = "Runs the verifier and validates the verification report shows a valid manifest."
+
+[task.repair]
+command = "bash solution/solve.sh"
+description = "Computes correct layer digests, determines ordering from image config, and rewrites the manifest."
+
+[task.resources]
+timeout = 300
+cpu = 2
+memory = "2GB"
+disk = "1GB"
