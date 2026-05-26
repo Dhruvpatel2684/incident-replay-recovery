@@ -1,0 +1,37 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "task_scheduling"
+difficulty = "hard"
+tags = ["job-scheduler", "priority-queue", "deadline-aware", "batch-processing", "dispatch-ordering"]
+
+difficulty_explanation = "Requires identifying 4 interacting defects across configuration parsing, batch scheduling, and dispatch ordering layers. Bugs involve subtle whitespace handling in pool lists, config section resolution for retry limits, accumulation semantics for wait metrics, and multi-key sort ordering for deterministic dispatch."
+solution_explanation = "Fix 1: strip whitespace when splitting active_pools config. Fix 2: read max_retries from [scheduling.deadlines] section. Fix 3: use max() assignment instead of += for max_wait_ms stats. Fix 4: add pool_id to dispatch sort key for deterministic ordering."
+verification_explanation = "Tests validate output files for correct job counts (55 from all 4 pools), proper retry limits (2 from deadlines config), valid max_wait_ms within expected bounds, and deterministic dispatch ordering by (priority_rank, submit_time, pool_id, job_id)."
+expert_time_estimate_hours = 3.0
+
+[task]
+name = "job-scheduler-repair"
+description = "Debug a priority-based job scheduler that processes jobs from multiple worker pools with deadline-aware retry logic. The system has defects in pool loading, retry configuration, wait time tracking, and dispatch queue ordering."
+
+[task.difficulty]
+level = "hard"
+reasoning = "Four bugs span three modules with non-obvious interactions. The config whitespace bug silently drops a pool, the wrong section reads a plausible but incorrect retry limit, the accumulation bug produces inflated wait metrics, and the sort tiebreaker only manifests when jobs share the same priority and submit_time from different pools."
+
+[task.runtime]
+entrypoint = "python3 -m runtime.run_scheduler"
+language = "python"
+dependencies = "stdlib-only"
+
+[task.validator]
+command = "bash tests/test.sh"
+description = "Runs the job scheduler system, then executes pytest to validate output correctness including pool coverage, retry limits, wait metrics, and dispatch ordering."
+
+[task.repair]
+command = "bash solution/solve.sh"
+description = "Patches loader whitespace handling, scheduler config section, wait time accumulation, and dispatch sort key, then re-runs the system."
+
+[task.resources]
+timeout = 300
+cpu = 2
+memory = "2GB"
+disk = "1GB"
