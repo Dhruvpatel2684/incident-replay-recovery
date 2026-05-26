@@ -1,0 +1,37 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "distributed_rate_limiting"
+difficulty = "hard"
+tags = ["rate-limiting", "token-bucket", "sliding-window", "request-classification", "enforcement-policy"]
+
+difficulty_explanation = "Five interacting bugs across 5 modules that produce cascading failures. Fixing the enforcer (OR→AND) increases denials, which changes whether stream tests pass. Fixing the classifier exposes previously hidden traffic to the rate limiter. The bucket refill off-by-one only matters when token counts are near boundaries. The stats division error produces plausible but wrong values. Each partial fix can break other tests."
+solution_explanation = "Fix 1: bucket refill removes +1 from interval count. Fix 2: enforcer strict mode uses AND instead of OR. Fix 3: classifier strips regex anchors from prefix patterns. Fix 4: window boundary uses strict inequality for start. Fix 5: stats rate divides by 1000 not 100 for ms-to-sec conversion."
+verification_explanation = "Tests validate behavioral invariants: exempt tier classification, enforcement denial ratios, per-stream throughput characteristics, and rate calculation bounds. No reference implementations in tests."
+expert_time_estimate_hours = 3.5
+
+[task]
+name = "rate-limiter-repair"
+description = "Debug a multi-layer rate limiting system combining token bucket and sliding window algorithms with request classification and strict enforcement policy. Five interacting defects across classification, enforcement logic, bucket refill, window counting, and statistics computation."
+
+[task.difficulty]
+level = "hard"
+reasoning = "Bugs interact non-linearly: fixing the enforcer logic dramatically changes system behavior, the classifier bug masks entire request categories, and the bucket off-by-one only manifests at specific token counts. Partial fixes can make other tests fail, requiring all five fixes to be applied correctly together."
+
+[task.runtime]
+entrypoint = "python3 -m runtime.run_limiter"
+language = "python"
+dependencies = "stdlib-only"
+
+[task.validator]
+command = "bash tests/test.sh"
+description = "Runs the rate limiter on traffic streams, then validates behavioral invariants including tier classification, enforcement ratios, stream throughput, and rate calculations."
+
+[task.repair]
+command = "bash solution/solve.sh"
+description = "Patches bucket refill formula, enforcer logic, classifier patterns, window boundaries, and stats time conversion, then re-runs."
+
+[task.resources]
+timeout = 300
+cpu = 2
+memory = "2GB"
+disk = "1GB"
