@@ -1,0 +1,21 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "compiler-internals"
+difficulty = "hard"
+tags = ["register-allocation", "graph-coloring", "data-repair", "interference-graph", "compiler"]
+difficulty_explanation = "Requires understanding register allocation via graph coloring, reasoning about corrupted data formats, identifying multiple corruption types from symptoms, and writing a multi-step repair script that restores semantic consistency"
+scoring_explanation = "15 graduated tests: 4 easy (output existence/structure), 4 medium (no conflicts, valid registers, correct node count), 7 hard (full interference correctness, edge count, spill count, live range consistency, register class constraints)"
+expert_time_estimate_hours = 1.5
+
+[task]
+slug = "regalloc-interference-repair"
+description = "Repair corrupted interference graph and live range data so that a correct DSatur graph coloring register allocator produces valid assignments"
+
+[task.environment]
+dockerfile = "environment/Dockerfile"
+
+[task.solution]
+solve_script = "solution/solve.sh"
+
+[task.tests]
+test_script = "tests/test.sh"
