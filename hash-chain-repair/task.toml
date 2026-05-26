@@ -1,0 +1,37 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "cryptographic_verification"
+difficulty = "hard"
+tags = ["merkle-tree", "hash-chain", "cryptographic-proof", "commitment-scheme", "domain-separation"]
+
+difficulty_explanation = "Requires understanding cryptographic hash construction semantics: domain separation prefix ordering, Merkle proof direction logic, tree level counting, and nonce byte encoding conventions. None of the bugs involve config parsing or whitespace — they are purely algorithmic errors in crypto protocol implementation that look syntactically valid."
+solution_explanation = "Fix 1: Prepend leaf prefix before data (not after) for domain separation. Fix 2: Correct proof verification direction mapping (left sibling → H(sibling,current)). Fix 3: Tree depth counts all levels including leaves. Fix 4: Nonce encoding uses big-endian per specification."
+verification_explanation = "Tests independently compute reference hashes and commitments using the correct algorithms, then compare against system output. Also validates proof verification success rate, tree depth, and system integrity flag."
+expert_time_estimate_hours = 3.0
+
+[task]
+name = "hash-chain-repair"
+description = "Debug a cryptographic verification system that builds Merkle trees, generates inclusion proofs, and computes hash-chain commitments for transaction batches. The system has defects in domain separation ordering, proof direction logic, tree level counting, and nonce encoding."
+
+[task.difficulty]
+level = "hard"
+reasoning = "Four bugs are embedded in cryptographic algorithm implementations where the code looks syntactically correct but violates protocol semantics. Finding them requires understanding hash domain separation, Merkle proof verification mechanics, tree structure counting, and byte encoding conventions. No config parsing or whitespace bugs — purely algorithmic reasoning required."
+
+[task.runtime]
+entrypoint = "python3 -m runtime.run_verify"
+language = "python"
+dependencies = "stdlib-only"
+
+[task.validator]
+command = "bash tests/test.sh"
+description = "Runs the verification system then validates output against independently computed reference values for Merkle roots, proofs, commitments, and tree metrics."
+
+[task.repair]
+command = "bash solution/solve.sh"
+description = "Patches hasher prefix ordering, proof direction logic, tree depth calculation, and nonce encoding, then re-runs the system."
+
+[task.resources]
+timeout = 300
+cpu = 2
+memory = "2GB"
+disk = "1GB"
