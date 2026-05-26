@@ -1,0 +1,37 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "database_internals"
+difficulty = "hard"
+tags = ["wal-compaction", "log-structured-merge", "checksum-verification", "snapshot-recovery", "bitwise-operations"]
+
+difficulty_explanation = "Four bugs require understanding database internal encoding schemes: a bitwise operator confusion (& vs >>), a hex mask truncation error (0x0000FFFF vs 0xFFFFFFFF), a checkpoint boundary direction error (floor vs ceil), and a fence-post comparison (< vs <=). None are config/whitespace/sort bugs — all require reasoning about bit-level operations and boundary arithmetic."
+solution_explanation = "Fix 1: LSN segment extraction uses >> (right-shift) not & (bitwise-AND) to divide by segment_size. Fix 2: XOR-fold lower mask must be 0xFFFFFFFF (32-bit) not 0x0000FFFF (16-bit). Fix 3: Checkpoint boundary rounds UP ((n//i+1)*i) not DOWN ((n//i)*i). Fix 4: GC watermark comparison uses strict < (not <=) so tombstones at exactly the watermark are retained."
+verification_explanation = "Tests independently compute reference checksums with the correct algorithm, verify exact tombstone retention counts, check snapshot size against expected boundary behavior, and validate segment enumeration."
+expert_time_estimate_hours = 3.5
+
+[task]
+name = "wal-compaction-repair"
+description = "Debug a Write-Ahead Log compaction system that merges WAL segments, performs garbage collection on tombstones, builds point-in-time snapshots, and computes integrity checksums. Defects are in LSN bit-manipulation, checksum fold width, checkpoint boundary direction, and GC watermark comparison semantics."
+
+[task.difficulty]
+level = "hard"
+reasoning = "All four bugs involve subtle numerical/bitwise errors that look syntactically correct. The bitwise & vs >> confusion produces valid but wrong segment numbers. The hex mask differs by only 4 characters in a hex literal. The boundary arithmetic differs by a single +1. The comparison operator differs by a single character. Each requires understanding the mathematical semantics of the operation, not just its syntax."
+
+[task.runtime]
+entrypoint = "python3 -m runtime.run_compaction"
+language = "python"
+dependencies = "stdlib-only"
+
+[task.validator]
+command = "bash tests/test.sh"
+description = "Runs WAL compaction then validates segment detection, checksum correctness, tombstone retention, snapshot completeness, and end-to-end integrity."
+
+[task.repair]
+command = "bash solution/solve.sh"
+description = "Patches LSN bit-shift operator, checksum fold mask, boundary rounding direction, and GC comparison operator, then re-runs."
+
+[task.resources]
+timeout = 300
+cpu = 2
+memory = "2GB"
+disk = "1GB"

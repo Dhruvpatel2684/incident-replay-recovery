@@ -1,0 +1,18 @@
+[
+  {"lsn": 512, "op": "put", "key": "users:1014", "value": "nancy", "ts": 3000},
+  {"lsn": 513, "op": "del", "key": "users:1009", "value": null, "ts": 3001},
+  {"lsn": 514, "op": "put", "key": "orders:5014", "value": "{item:N,qty:4}", "ts": 3002},
+  {"lsn": 515, "op": "put", "key": "users:1015", "value": "oscar", "ts": 3003},
+  {"lsn": 516, "op": "del", "key": "orders:5005", "value": null, "ts": 3004},
+  {"lsn": 517, "op": "put", "key": "config:log_level", "value": "info", "ts": 3005},
+  {"lsn": 518, "op": "put", "key": "users:1016", "value": "pat", "ts": 3006},
+  {"lsn": 519, "op": "del", "key": "users:1010", "value": null, "ts": 3007},
+  {"lsn": 520, "op": "put", "key": "orders:5015", "value": "{item:O,qty:2}", "ts": 3008},
+  {"lsn": 521, "op": "put", "key": "users:1001", "value": "alice_v5", "ts": 3009},
+  {"lsn": 522, "op": "del", "key": "config:cache_ttl", "value": null, "ts": 3010},
+  {"lsn": 523, "op": "put", "key": "orders:5016", "value": "{item:P,qty:1}", "ts": 3011},
+  {"lsn": 524, "op": "put", "key": "users:1017", "value": "quinn", "ts": 3012},
+  {"lsn": 525, "op": "del", "key": "orders:5006", "value": null, "ts": 3013},
+  {"lsn": 526, "op": "put", "key": "config:session_ttl", "value": "3600", "ts": 3014},
+  {"lsn": 527, "op": "put", "key": "users:1018", "value": "rachel", "ts": 3015}
+]
