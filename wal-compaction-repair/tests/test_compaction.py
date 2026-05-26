@@ -247,9 +247,12 @@ class TestTier4FullConsistency:
         expected_fingerprint = "ea8386e7e4f8b5d2"
         assert report["compaction_fingerprint"] == expected_fingerprint, (
             f"Compaction fingerprint mismatch. Expected '{expected_fingerprint}', "
-            f"got '{report['compaction_fingerprint']}'. This hash depends on the "
-            f"entire compacted state being correct (visibility filtering, LSN-based "
-            f"conflict resolution, tombstone handling, and sorted key iteration)."
+            f"got '{report['compaction_fingerprint']}'. This hash is computed as "
+            f"SHA-256 over 'key=raw_value\\n' for each key in sorted order, where "
+            f"raw_value is the original WAL value string WITHOUT any JSON "
+            f"re-serialization or normalization. If the state content is correct "
+            f"(test_full_state_consistency passes) but the fingerprint is wrong, "
+            f"the hash function may be transforming values before hashing."
         )
 
     def test_full_state_consistency(self):
