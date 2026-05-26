@@ -1,0 +1,37 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "cache_management"
+difficulty = "hard"
+tags = ["cache-eviction", "lru", "tier-management", "config-resolution", "deterministic-ordering"]
+
+difficulty_explanation = "Requires identifying 4 interacting defects across 5 source files spanning configuration parsing, scoring utility, eviction engine, and ranking layers. Bugs involve subtle whitespace handling that cascades through tier config lookups, config section misdirection in a helper module, window-level metric accumulation semantics, and multi-key sort ordering for stable output."
+solution_explanation = "Fix 1: strip whitespace when splitting active_tiers config list. Fix 2: read eviction params from [eviction.lru] section in scorer utility. Fix 3: use max() instead of += for peak_eviction_score tracking. Fix 4: add tier_id to ranking sort key for deterministic ordering."
+verification_explanation = "Tests validate output files for correct entry counts (60 from all tiers), appropriate candidate ratios, bounded peak scores, archive tier presence in ranking, and deterministic tier-aware ordering at same access timestamps."
+expert_time_estimate_hours = 3.0
+
+[task]
+name = "cache-eviction-repair"
+description = "Debug a multi-tier cache eviction system that analyzes entries from hot, warm, and archive tiers using LRU-based scoring. The system has defects in tier loading, scoring parameter resolution, window metric tracking, and eviction candidate ranking."
+
+[task.difficulty]
+level = "hard"
+reasoning = "Four bugs span five modules with cascading interactions. The whitespace bug causes silent tier config fallback (not just filtering), the wrong config section is in a separate utility module requiring cross-file reasoning, the accumulation bug masquerades as a score calculation error, and the sort tiebreaker only manifests when archive tier entries share timestamps with other tiers."
+
+[task.runtime]
+entrypoint = "python3 -m runtime.run_eviction"
+language = "python"
+dependencies = "stdlib-only"
+
+[task.validator]
+command = "bash tests/test.sh"
+description = "Runs the eviction analysis system, then executes pytest to validate output correctness including tier coverage, candidate ratios, peak score bounds, and ranking ordering."
+
+[task.repair]
+command = "bash solution/solve.sh"
+description = "Patches loader whitespace handling, scorer config section, evictor peak tracking, and ranker sort key, then re-runs the system."
+
+[task.resources]
+timeout = 300
+cpu = 2
+memory = "2GB"
+disk = "1GB"

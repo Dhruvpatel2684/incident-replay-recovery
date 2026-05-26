@@ -1,0 +1,20 @@
+[
+  {"entry_id": "A001", "tier_id": "archive", "key": "backup:snapshot:2024-06-01", "access_time": "2024-06-10T10:00:00Z", "access_count": 1, "size_bytes": 1048576, "created_at": "2024-06-01T00:00:00Z"},
+  {"entry_id": "A002", "tier_id": "archive", "key": "log:compressed:week22", "access_time": "2024-06-10T09:00:00Z", "access_count": 2, "size_bytes": 524288, "created_at": "2024-05-28T00:00:00Z"},
+  {"entry_id": "A003", "tier_id": "archive", "key": "audit:trail:2024-q2", "access_time": "2024-06-10T08:00:00Z", "access_count": 1, "size_bytes": 2097152, "created_at": "2024-05-15T00:00:00Z"},
+  {"entry_id": "A004", "tier_id": "archive", "key": "report:annual:2023", "access_time": "2024-06-10T07:00:00Z", "access_count": 3, "size_bytes": 4194304, "created_at": "2024-01-15T00:00:00Z"},
+  {"entry_id": "A005", "tier_id": "archive", "key": "ml:training:dataset_v1", "access_time": "2024-06-10T06:00:00Z", "access_count": 1, "size_bytes": 8388608, "created_at": "2024-03-01T00:00:00Z"},
+  {"entry_id": "A006", "tier_id": "archive", "key": "config:history:migrations", "access_time": "2024-06-10T05:00:00Z", "access_count": 4, "size_bytes": 32768, "created_at": "2024-02-01T00:00:00Z"},
+  {"entry_id": "A007", "tier_id": "archive", "key": "backup:snapshot:2024-05-01", "access_time": "2024-06-10T04:00:00Z", "access_count": 1, "size_bytes": 1048576, "created_at": "2024-05-01T00:00:00Z"},
+  {"entry_id": "A008", "tier_id": "archive", "key": "log:compressed:week20", "access_time": "2024-06-10T03:00:00Z", "access_count": 1, "size_bytes": 524288, "created_at": "2024-05-14T00:00:00Z"},
+  {"entry_id": "A009", "tier_id": "archive", "key": "audit:compliance:2024-h1", "access_time": "2024-06-10T02:00:00Z", "access_count": 2, "size_bytes": 1572864, "created_at": "2024-04-01T00:00:00Z"},
+  {"entry_id": "A010", "tier_id": "archive", "key": "report:quarterly:2024-q1", "access_time": "2024-06-10T01:00:00Z", "access_count": 5, "size_bytes": 262144, "created_at": "2024-04-15T00:00:00Z"},
+  {"entry_id": "A011", "tier_id": "archive", "key": "ml:model:deprecated_v1", "access_time": "2024-06-10T10:00:00Z", "access_count": 5, "size_bytes": 1024, "created_at": "2023-12-01T00:00:00Z"},
+  {"entry_id": "A012", "tier_id": "archive", "key": "backup:db:pre_migration", "access_time": "2024-06-09T23:00:00Z", "access_count": 1, "size_bytes": 33554432, "created_at": "2024-01-01T00:00:00Z"},
+  {"entry_id": "A013", "tier_id": "archive", "key": "log:compressed:week18", "access_time": "2024-06-09T22:00:00Z", "access_count": 1, "size_bytes": 524288, "created_at": "2024-04-30T00:00:00Z"},
+  {"entry_id": "A014", "tier_id": "archive", "key": "config:legacy:v1_compat", "access_time": "2024-06-09T21:00:00Z", "access_count": 7, "size_bytes": 8192, "created_at": "2023-06-01T00:00:00Z"},
+  {"entry_id": "A015", "tier_id": "archive", "key": "audit:gdpr:deletions_q1", "access_time": "2024-06-09T20:00:00Z", "access_count": 2, "size_bytes": 131072, "created_at": "2024-04-01T00:00:00Z"},
+  {"entry_id": "A016", "tier_id": "archive", "key": "report:incident:2024-IR03", "access_time": "2024-06-09T19:00:00Z", "access_count": 3, "size_bytes": 65536, "created_at": "2024-03-15T00:00:00Z"},
+  {"entry_id": "A017", "tier_id": "archive", "key": "ml:features:deprecated", "access_time": "2024-06-09T18:00:00Z", "access_count": 1, "size_bytes": 4194304, "created_at": "2023-09-01T00:00:00Z"},
+  {"entry_id": "A018", "tier_id": "archive", "key": "backup:config:rollback", "access_time": "2024-06-09T17:00:00Z", "access_count": 2, "size_bytes": 16384, "created_at": "2024-02-15T00:00:00Z"}
+]
