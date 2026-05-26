@@ -1,0 +1,20 @@
+{
+  "zone_id": "north",
+  "events": [
+    {"seq": 0, "timestamp": 1000, "x": 5.5, "y": 12.3, "reading": 3.2},
+    {"seq": 1, "timestamp": 1010, "x": 7.1, "y": 14.8, "reading": 2.8},
+    {"seq": 2, "timestamp": 1025, "x": 6.0, "y": 11.5, "reading": 4.1},
+    {"seq": 3, "timestamp": 1040, "x": 15.2, "y": 22.7, "reading": 1.9},
+    {"seq": 4, "timestamp": 1055, "x": 16.8, "y": 23.1, "reading": 2.3},
+    {"seq": 5, "timestamp": 1070, "x": 5.9, "y": 13.0, "reading": 3.7},
+    {"seq": 6, "timestamp": 1085, "x": -3.2, "y": 15.6, "reading": 5.1},
+    {"seq": 7, "timestamp": 1100, "x": -4.7, "y": 16.2, "reading": 4.8},
+    {"seq": 8, "timestamp": 1100, "x": 8.3, "y": 12.9, "reading": 2.1},
+    {"seq": 9, "timestamp": 1120, "x": 6.5, "y": 14.0, "reading": 3.0},
+    {"seq": 10, "timestamp": 1135, "x": -2.8, "y": 17.1, "reading": 4.5},
+    {"seq": 11, "timestamp": 1150, "x": 7.7, "y": 13.5, "reading": 2.6},
+    {"seq": 12, "timestamp": 1165, "x": 16.1, "y": 21.9, "reading": 1.7},
+    {"seq": 13, "timestamp": 1180, "x": -5.3, "y": 14.8, "reading": 5.5},
+    {"seq": 14, "timestamp": 1195, "x": 6.2, "y": 12.1, "reading": 3.3}
+  ]
+}

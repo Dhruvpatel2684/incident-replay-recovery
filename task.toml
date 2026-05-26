@@ -1,0 +1,37 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "spatial_computing"
+difficulty = "hard"
+tags = ["geospatial", "spatial-indexing", "event-correlation", "grid-systems", "temporal-analysis"]
+
+difficulty_explanation = "Four interacting defects span configuration parsing, coordinate mathematics, accumulation logic, and sort ordering. Bugs cascade: incorrect zone filtering reduces data, wrong cell computation changes spatial neighborhoods, accumulation inflates scores, and non-deterministic ordering changes cluster formation. Fixing any subset produces different but still incorrect values."
+solution_explanation = "Five fixes across four files: strip whitespace from comma-split zone filter in run_correlator.py, replace int() with math.floor() for grid cell computation in grid.py, change += to = for per-cell window scores in correlator.py, read time_window_sec from correlation.scoring section instead of correlation in correlator.py, and add zone_id as sort tiebreaker in ingest.py merge function."
+verification_explanation = "Tests validate exact numeric output values for event counts, cell assignments, window scores, cluster counts, and specific cluster attributes that require all defects to be resolved simultaneously."
+expert_time_estimate_hours = 3.0
+
+[task]
+name = "spatial-index-repair"
+description = "Debug a geospatial event correlation engine that indexes sensor readings into a spatial grid and computes temporal correlation clusters. Multiple interacting defects produce incorrect cell assignments, inflated scores, and non-deterministic ordering."
+
+[task.difficulty]
+level = "hard"
+reasoning = "Requires understanding coordinate mathematics for negative values, temporal windowing semantics, configuration section hierarchy, and sort stability. Defects interact such that partial fixes produce different incorrect outputs."
+
+[task.runtime]
+entrypoint = "python3 -m runtime.run_correlator"
+language = "python"
+dependencies = "stdlib-only"
+
+[task.validator]
+command = "bash tests/test.sh"
+description = "Runs the correlator then validates output values with pytest."
+
+[task.repair]
+command = "bash solution/solve.sh"
+description = "Patches all defects and re-runs the correlator to produce correct output."
+
+[task.resources]
+timeout = 300
+cpu = 2
+memory = "2GB"
+disk = "1GB"
