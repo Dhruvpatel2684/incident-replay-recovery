@@ -1,9 +1,37 @@
 author_name = "Dhruvkumar Patel"
 author_email = "dhruvpatel2284@gmail.com"
+category = "typesetting"
+difficulty = "hard"
+tags = ["layout-engine", "typesetting", "pagination", "line-breaking", "config-parsing"]
+
+difficulty_explanation = "Requires tracing four interacting defects across configuration parsing, line-breaking logic, page-break quality scoring, and sort order. Bug A silently excludes a typesetting mode. Bug B changes line width affecting all pagination. Bug C inflates page-break penalty scores. Bug D produces non-deterministic break selection. The bugs interact: fixing A/B changes paragraph flow which affects C/D outcomes."
+solution_explanation = "The repair strips whitespace from comma-split mode names, reads line_width from [layout.typeset] instead of [layout], changes penalty accumulation from += to = (last-write-wins), and adds paragraph_id to the break candidate sort key for deterministic ordering."
+verification_explanation = "Tests check: correct line width (65), all 4 modes active including hyphenated, correct page count, penalty scores use last-value not sum, break candidates sorted deterministically by paragraph_id, output files exist with correct structure and field names."
+expert_time_estimate_hours = 2.5
 
 [task]
-slug = "layout-engine-repair"
-category = "typesetting"
-title = "Document Layout Engine Recovery"
-description = "Recover a document layout engine that is producing incorrect pagination, wrong line widths, missing typesetting modes, and non-deterministic page break selection."
-difficulty = "hard"
+name = "layout-engine-repair"
+description = "Debug a document layout engine that produces incorrect pagination, wrong line widths, missing typesetting modes, and non-deterministic page break selection"
+
+[task.difficulty]
+level = "hard"
+reasoning = "Four interacting bugs spanning config parsing, text layout, scoring, and sort logic require systematic diagnosis across configuration and engine source"
+
+[task.runtime]
+entrypoint = "python3 /app/runtime/run_layout.py"
+language = "python"
+dependencies = "stdlib-only"
+
+[task.validator]
+command = "bash tests/test.sh"
+description = "Runs pytest against 15 test functions checking line width, modes, pagination, penalties, sort order, and output structure"
+
+[task.repair]
+command = "bash solution/solve.sh"
+description = "Patches layout_engine.py with four fixes then re-runs the engine to produce correct output"
+
+[task.resources]
+timeout = 300
+cpu = 2
+memory = "2GB"
+disk = "1GB"
