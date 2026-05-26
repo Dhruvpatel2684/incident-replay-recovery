@@ -1,0 +1,13 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "databases"
+difficulty = "hard"
+tags = ["wal", "write-ahead-log", "compaction", "transactions", "mvcc", "visibility", "debugging"]
+difficulty_explanation = "Requires understanding MVCC visibility semantics, sort algorithm invariants, and tombstone lifecycle. Bug 1 conflates 'finalized' (evaluable) with 'visible' (committed) in a well-documented visibility predicate. Bug 2 sorts descending but takes [-1] giving the minimum instead of maximum. Bug 3 records tombstones from aborted transactions. Bug 4 normalizes values to canonical JSON before fingerprint computation, which differs from the raw string hashing the WAL state naturally produces."
+solution_explanation = "The oracle re-processes WAL with correct committed-only visibility, ascending LSN sort with [-1] for last-writer-wins, committed-only tombstones, and raw value string fingerprint computation (without canonical JSON normalization)."
+verification_explanation = "14 tests in 4 tiers: structural checks pass with buggy code, visibility tests need Bug 1 fixed, ordering/tombstone tests need Bugs 2-3 fixed, and fingerprint tests need all bugs fixed simultaneously."
+expert_time_estimate_hours = 2.5
+
+[task]
+name = "wal-compaction-repair"
+description = "Debug a broken WAL compaction tool that incorrectly reconstructs database state due to bugs in transaction visibility, conflict resolution ordering, and tombstone lifecycle management."
