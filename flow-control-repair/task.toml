@@ -1,0 +1,37 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "network_protocols"
+difficulty = "hard"
+tags = ["flow-control", "congestion-window", "tcp-simulation", "ack-processing", "transport-protocol"]
+
+difficulty_explanation = "Four interacting bugs spread across 4 files in a 10-file codebase. The effective window bug (max vs min) cascades through the sender to produce over-transmission. The receiver window timing bug creates negative advertised windows. The ACK tracker re-trigger bug causes retransmission storms. The congestion avoidance growth bug allows unbounded window expansion. Each bug affects metrics that other bugs also influence, making isolated diagnosis difficult."
+solution_explanation = "Fix 1: window.py get_effective_window uses min(cwnd, recv_window) not max. Fix 2: receiver.py computes advertised window AFTER buffer update. Fix 3: ack_tracker.py has_triple_dup triggers only at exactly threshold (==) not at-or-above (>=). Fix 4: window.py congestion avoidance phase stops growing once past slow start."
+verification_explanation = "Tests check exact segment counts (158 total sent, 84 baseline), non-negative receiver windows, bounded retransmissions (<=4), efficiency range (0.70-0.80), and buffer capacity constraints."
+expert_time_estimate_hours = 3.5
+
+[task]
+name = "flow-control-repair"
+description = "Debug a network transport flow control simulation with interacting defects in congestion window management, receiver feedback, retransmission triggering, and window growth. Bugs span 4 files across 3 sub-packages."
+
+[task.difficulty]
+level = "hard"
+reasoning = "The 10-file codebase requires understanding cross-module protocol state flow. The effective window bug looks intentional (maximizing throughput). The receiver timing bug requires understanding when buffer state is consumed vs reported. The retransmit re-trigger is a subtle >= vs == issue buried in a helper method. The growth bug requires understanding TCP congestion avoidance semantics (1/cwnd per ACK vs 1 per ACK)."
+
+[task.runtime]
+entrypoint = "python3 -m runtime.run_flow"
+language = "python"
+dependencies = "stdlib-only"
+
+[task.validator]
+command = "bash tests/test.sh"
+description = "Runs flow control simulation then validates segment counts, window constraints, retransmission bounds, and efficiency metrics."
+
+[task.repair]
+command = "bash solution/solve.sh"
+description = "Patches window calculation, receiver timing, retransmit trigger, and growth logic across 4 files, then re-runs."
+
+[task.resources]
+timeout = 300
+cpu = 2
+memory = "2GB"
+disk = "1GB"

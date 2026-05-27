@@ -1,0 +1,18 @@
+{
+  "scenario_id": "window_pressure",
+  "config": {"receiver_buffer": 32, "initial_recv_window": 16},
+  "loss_set": [],
+  "events": [
+    {"type": "send", "time_ms": 0, "count": 16},
+    {"type": "ack_arrive", "time_ms": 40},
+    {"type": "send", "time_ms": 80, "count": 18},
+    {"type": "ack_arrive", "time_ms": 120},
+    {"type": "window_update", "time_ms": 130, "window": 8},
+    {"type": "send", "time_ms": 160, "count": 12},
+    {"type": "ack_arrive", "time_ms": 200},
+    {"type": "drain", "time_ms": 220, "amount": 24},
+    {"type": "window_update", "time_ms": 230, "window": 24},
+    {"type": "send", "time_ms": 260, "count": 16},
+    {"type": "ack_arrive", "time_ms": 300}
+  ]
+}

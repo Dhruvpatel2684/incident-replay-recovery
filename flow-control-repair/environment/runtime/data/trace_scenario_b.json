@@ -1,0 +1,17 @@
+{
+  "scenario_id": "loss_and_recovery",
+  "config": {"receiver_buffer": 48, "initial_recv_window": 24},
+  "loss_set": [8, 19],
+  "events": [
+    {"type": "send", "time_ms": 0, "count": 20},
+    {"type": "ack_arrive", "time_ms": 60},
+    {"type": "send", "time_ms": 100, "count": 16},
+    {"type": "ack_arrive", "time_ms": 160},
+    {"type": "timeout", "time_ms": 300},
+    {"type": "send", "time_ms": 340, "count": 10},
+    {"type": "ack_arrive", "time_ms": 400},
+    {"type": "drain", "time_ms": 420, "amount": 24},
+    {"type": "send", "time_ms": 440, "count": 12},
+    {"type": "ack_arrive", "time_ms": 500}
+  ]
+}
