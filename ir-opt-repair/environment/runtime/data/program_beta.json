@@ -1,0 +1,50 @@
+{
+  "program_id": "beta",
+  "description": "Diamond CFG with merge point and cross-block dead code",
+  "blocks": [
+    {
+      "id": "entry",
+      "instructions": [
+        {"opcode": "const", "dest": "%x", "operands": [20.0]},
+        {"opcode": "const", "dest": "%y", "operands": [7.0]},
+        {"opcode": "div", "dest": "%z", "operands": [20.0, 7.0]},
+        {"opcode": "cbranch", "dest": null, "operands": ["%z", "left", "right"]}
+      ]
+    },
+    {
+      "id": "left",
+      "instructions": [
+        {"opcode": "mul", "dest": "%l1", "operands": ["%z", 3.0]},
+        {"opcode": "add", "dest": "%l2", "operands": ["%l1", "%x"]},
+        {"opcode": "const", "dest": "%ldead", "operands": [777.0]},
+        {"opcode": "branch", "dest": null, "operands": ["merge"]}
+      ]
+    },
+    {
+      "id": "right",
+      "instructions": [
+        {"opcode": "sub", "dest": "%r1", "operands": ["%x", "%z"]},
+        {"opcode": "mul", "dest": "%r2", "operands": ["%r1", 2.0]},
+        {"opcode": "const", "dest": "%rdead", "operands": [888.0]},
+        {"opcode": "branch", "dest": null, "operands": ["merge"]}
+      ]
+    },
+    {
+      "id": "merge",
+      "instructions": [
+        {"opcode": "phi", "dest": "%m", "operands": ["%l2", "%r2"]},
+        {"opcode": "add", "dest": "%m2", "operands": ["%m", "%z"]},
+        {"opcode": "mul", "dest": "%m3", "operands": ["%m2", 10.0]},
+        {"opcode": "const", "dest": "%mdead", "operands": [555.0]},
+        {"opcode": "add", "dest": "%mdead2", "operands": ["%mdead", "%m"]},
+        {"opcode": "ret", "dest": null, "operands": ["%m3"]}
+      ]
+    }
+  ],
+  "edges": [
+    {"from": "entry", "to": "left"},
+    {"from": "entry", "to": "right"},
+    {"from": "left", "to": "merge"},
+    {"from": "right", "to": "merge"}
+  ]
+}

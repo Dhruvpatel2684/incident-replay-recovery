@@ -1,0 +1,48 @@
+{
+  "program_id": "gamma",
+  "description": "Long chain with high register pressure and constants",
+  "blocks": [
+    {
+      "id": "entry",
+      "instructions": [
+        {"opcode": "const", "dest": "%v0", "operands": [100.0]},
+        {"opcode": "const", "dest": "%v1", "operands": [4.0]},
+        {"opcode": "div", "dest": "%v2", "operands": [100.0, 4.0]},
+        {"opcode": "add", "dest": "%v3", "operands": ["%v2", "%v0"]},
+        {"opcode": "mul", "dest": "%v4", "operands": ["%v3", "%v1"]},
+        {"opcode": "sub", "dest": "%v5", "operands": ["%v4", "%v2"]},
+        {"opcode": "add", "dest": "%v6", "operands": ["%v5", 7.0]},
+        {"opcode": "mul", "dest": "%v7", "operands": ["%v6", 2.0]},
+        {"opcode": "add", "dest": "%v8", "operands": ["%v7", "%v0"]},
+        {"opcode": "sub", "dest": "%v9", "operands": ["%v8", "%v1"]},
+        {"opcode": "branch", "dest": null, "operands": ["compute"]}
+      ]
+    },
+    {
+      "id": "compute",
+      "instructions": [
+        {"opcode": "mul", "dest": "%c0", "operands": ["%v9", "%v2"]},
+        {"opcode": "add", "dest": "%c1", "operands": ["%c0", "%v5"]},
+        {"opcode": "sub", "dest": "%c2", "operands": ["%c1", "%v3"]},
+        {"opcode": "mul", "dest": "%c3", "operands": ["%c2", "%v7"]},
+        {"opcode": "add", "dest": "%c4", "operands": ["%c3", "%v0"]},
+        {"opcode": "div", "dest": "%c5", "operands": ["%c4", "%v1"]},
+        {"opcode": "const", "dest": "%unused1", "operands": [12345.0]},
+        {"opcode": "const", "dest": "%unused2", "operands": [67890.0]},
+        {"opcode": "add", "dest": "%unused3", "operands": ["%unused1", "%unused2"]},
+        {"opcode": "branch", "dest": null, "operands": ["final"]}
+      ]
+    },
+    {
+      "id": "final",
+      "instructions": [
+        {"opcode": "add", "dest": "%out", "operands": ["%c5", "%v9"]},
+        {"opcode": "ret", "dest": null, "operands": ["%out"]}
+      ]
+    }
+  ],
+  "edges": [
+    {"from": "entry", "to": "compute"},
+    {"from": "compute", "to": "final"}
+  ]
+}

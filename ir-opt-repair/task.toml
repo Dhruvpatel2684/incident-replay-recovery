@@ -1,0 +1,37 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "compiler_internals"
+difficulty = "hard"
+tags = ["ir-optimization", "dead-code-elimination", "constant-folding", "register-allocation", "ssa-analysis"]
+
+difficulty_explanation = "Four interacting bugs across 4 files in a 12-file codebase organized in 4 packages. The liveness bug requires understanding SSA cross-block dataflow. The constant folding bug requires knowing the IR's float division semantics. The register allocation bug is a subtle boundary condition. The dominance bug requires understanding dominator tree construction. All must be fixed together for correct output."
+solution_explanation = "Fix 1: liveness analysis must scan ALL blocks for register uses, not just the defining block. Fix 2: constant folding division must use float semantics (a/b) not integer truncation (int(a)//int(b)). Fix 3: register spill threshold uses >= (at capacity means spill needed). Fix 4: idom computation checks if other is in dom[candidate] not candidate in dom[other]."
+verification_explanation = "Tests check exact instruction counts (45 live), reduction ratio range (0.15-0.30), spill point detection (>=2), and per-program metrics requiring all passes to work correctly together."
+expert_time_estimate_hours = 4.0
+
+[task]
+name = "ir-opt-repair"
+description = "Debug a compiler IR optimizer with interacting defects in liveness analysis scope, constant folding semantics, register pressure threshold, and dominance computation. Bugs span 4 modules across 4 sub-packages in a 12-file codebase."
+
+[task.difficulty]
+level = "hard"
+reasoning = "Requires understanding SSA-form dataflow, compiler pass interactions, and the difference between local and global analysis. The liveness bug looks intentional (efficient local-only check). The constant folding bug is a single-operator difference (// vs /). The dominance bug inverts a membership test in a nested loop. The register bug is a single-character difference (> vs >=). All produce cascading effects through the pass chain."
+
+[task.runtime]
+entrypoint = "python3 -m runtime.run_optimizer"
+language = "python"
+dependencies = "stdlib-only"
+
+[task.validator]
+command = "bash tests/test.sh"
+description = "Runs optimizer on 3 test programs then validates exact instruction counts, register pressure, spill detection, and reduction ratios."
+
+[task.repair]
+command = "bash solution/solve.sh"
+description = "Patches liveness scope, division semantics, spill threshold, and dominance logic, then re-runs."
+
+[task.resources]
+timeout = 300
+cpu = 2
+memory = "2GB"
+disk = "1GB"

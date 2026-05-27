@@ -1,0 +1,42 @@
+{
+  "program_id": "alpha",
+  "description": "Arithmetic with constants and cross-block usage",
+  "blocks": [
+    {
+      "id": "entry",
+      "instructions": [
+        {"opcode": "const", "dest": "%a", "operands": [10.0]},
+        {"opcode": "const", "dest": "%b", "operands": [3.0]},
+        {"opcode": "div", "dest": "%c", "operands": [10.0, 3.0]},
+        {"opcode": "mul", "dest": "%d", "operands": ["%c", "%a"]},
+        {"opcode": "add", "dest": "%e", "operands": ["%d", 5.0]},
+        {"opcode": "const", "dest": "%dead1", "operands": [99.0]},
+        {"opcode": "mul", "dest": "%dead2", "operands": ["%dead1", 2.0]},
+        {"opcode": "branch", "dest": null, "operands": ["loop"]}
+      ]
+    },
+    {
+      "id": "loop",
+      "instructions": [
+        {"opcode": "add", "dest": "%f", "operands": ["%e", 1.0]},
+        {"opcode": "mul", "dest": "%g", "operands": ["%f", "%c"]},
+        {"opcode": "add", "dest": "%h", "operands": ["%g", "%b"]},
+        {"opcode": "const", "dest": "%dead3", "operands": [42.0]},
+        {"opcode": "sub", "dest": "%dead4", "operands": ["%dead3", 7.0]},
+        {"opcode": "cbranch", "dest": null, "operands": ["%h", "exit", "loop"]}
+      ]
+    },
+    {
+      "id": "exit",
+      "instructions": [
+        {"opcode": "add", "dest": "%result", "operands": ["%h", "%e"]},
+        {"opcode": "ret", "dest": null, "operands": ["%result"]}
+      ]
+    }
+  ],
+  "edges": [
+    {"from": "entry", "to": "loop"},
+    {"from": "loop", "to": "exit"},
+    {"from": "loop", "to": "loop"}
+  ]
+}
