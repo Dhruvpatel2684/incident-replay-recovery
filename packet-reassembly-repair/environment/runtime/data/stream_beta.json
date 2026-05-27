@@ -1,0 +1,11 @@
+{
+  "stream_id": "beta",
+  "description": "Overlapping fragments with conflicting data (evasion attempt)",
+  "expected_checksum": 37977,
+  "fragments": [
+    {"frag_id": "B1", "offset": 0, "length": 12, "payload": [65, 84, 84, 65, 67, 75, 32, 80, 65, 89, 76, 79]},
+    {"frag_id": "B2", "offset": 8, "length": 12, "payload": [83, 65, 70, 69, 32, 68, 65, 84, 65, 32, 72, 69]},
+    {"frag_id": "B3", "offset": 20, "length": 8, "payload": [82, 69, 46, 69, 78, 68, 10, 0]},
+    {"frag_id": "B4", "offset": 6, "length": 8, "payload": [32, 80, 65, 89, 76, 79, 65, 68]}
+  ]
+}

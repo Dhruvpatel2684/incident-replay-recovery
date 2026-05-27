@@ -1,0 +1,11 @@
+{
+  "stream_id": "alpha",
+  "description": "Normal non-overlapping fragments",
+  "expected_checksum": 61172,
+  "fragments": [
+    {"frag_id": "A1", "offset": 0, "length": 8, "payload": [72, 69, 76, 76, 79, 32, 87, 79]},
+    {"frag_id": "A2", "offset": 8, "length": 8, "payload": [82, 76, 68, 33, 10, 84, 69, 83]},
+    {"frag_id": "A3", "offset": 16, "length": 8, "payload": [84, 32, 68, 65, 84, 65, 32, 72]},
+    {"frag_id": "A4", "offset": 24, "length": 8, "payload": [69, 82, 69, 46, 10, 69, 78, 68]}
+  ]
+}

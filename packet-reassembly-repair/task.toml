@@ -1,0 +1,37 @@
+author_name = "Dhruvkumar Patel"
+author_email = "dhruvpatel2284@gmail.com"
+category = "network_security"
+difficulty = "hard"
+tags = ["packet-reassembly", "ip-fragmentation", "overlap-detection", "checksum-verification", "ids-evasion"]
+
+difficulty_explanation = "Four interacting bugs across 4 files in a 10-file codebase. The reassembly length bug requires understanding IP fragment offset semantics (max extent vs sum). The overlap policy bug has a misleading comment that says 'keep incoming' for first-wins (actually should keep existing). The checksum bug is a byte-order swap in 16-bit word formation. The sort bug affects overlap resolution order non-obviously."
+solution_explanation = "Fix 1: compute datagram length as max(offset+length) not sum(lengths). Fix 2: 'first' policy returns existing value (not incoming). Fix 3: checksum word formation uses big-endian (high<<8|low) not little-endian. Fix 4: fragment sort uses (offset, frag_id) tuple for stable ordering."
+verification_explanation = "Tests check exact reassembled lengths (beta=28), 100% success rate, valid checksums against expected values, total bytes (96), and per-stream correctness."
+expert_time_estimate_hours = 3.5
+
+[task]
+name = "packet-reassembly-repair"
+description = "Debug an IP packet fragment reassembly system with interacting defects in datagram length computation, overlap resolution policy, integrity checksum byte ordering, and fragment sort stability. The system processes fragment streams detecting overlapping evasion attempts."
+
+[task.difficulty]
+level = "hard"
+reasoning = "The reassembly length bug looks correct (summing parts seems natural). The overlap policy bug has a MISLEADING COMMENT stating the wrong behavior as correct. The checksum byte order is a common confusion between host and network byte order. The sort stability bug only manifests when overlap policy is applied to fragments at the same offset. All 4 bugs must be fixed for checksums to validate."
+
+[task.runtime]
+entrypoint = "python3 -m runtime.run_reassembly"
+language = "python"
+dependencies = "stdlib-only"
+
+[task.validator]
+command = "bash tests/test.sh"
+description = "Runs fragment reassembly then validates datagram lengths, success rates, checksum verification, and aggregate metrics."
+
+[task.repair]
+command = "bash solution/solve.sh"
+description = "Patches length computation, policy logic, checksum byte order, and sort key, then re-runs."
+
+[task.resources]
+timeout = 300
+cpu = 2
+memory = "2GB"
+disk = "1GB"

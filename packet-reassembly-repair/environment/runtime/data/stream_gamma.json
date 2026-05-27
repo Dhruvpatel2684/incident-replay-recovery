@@ -1,0 +1,12 @@
+{
+  "stream_id": "gamma",
+  "description": "Out-of-order fragments with adjacent boundaries",
+  "expected_checksum": 47546,
+  "fragments": [
+    {"frag_id": "G1", "offset": 16, "length": 8, "payload": [84, 72, 73, 82, 68, 32, 66, 76]},
+    {"frag_id": "G2", "offset": 0, "length": 8, "payload": [70, 73, 82, 83, 84, 32, 66, 76]},
+    {"frag_id": "G3", "offset": 8, "length": 8, "payload": [79, 67, 75, 32, 72, 69, 82, 69]},
+    {"frag_id": "G4", "offset": 24, "length": 8, "payload": [79, 67, 75, 32, 72, 69, 82, 69]},
+    {"frag_id": "G5", "offset": 32, "length": 4, "payload": [69, 78, 68, 10]}
+  ]
+}
